@@ -1,0 +1,27 @@
+/* Match sugarwavestudio.com type system — Adobe Typekit (Nobel / Corbel /
+   Minion Pro / Myriad Pro). Headings = Corbel, body = Nobel light (200). */
+@import "https://use.typekit.net/mhk5guz.css";
+@import "https://use.typekit.net/qeq5bwj.css";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: nobel, sans-serif;
+  font-weight: 200;
+  background: #ffffff;
+  color: #000000;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2 { font-family: corbel, sans-serif; font-weight: 400; }
+h3 { font-family: corbel, sans-serif; font-weight: 300; }
+h4 { font-family: nobel, sans-serif; font-weight: 400; }
+
+p { font-family: nobel, sans-serif; font-weight: 200; line-height: 1.45; }
+
+input, textarea, button { font-family: nobel, sans-serif; }

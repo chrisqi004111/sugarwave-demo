@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import BeforeAfterSlider from '../components/BeforeAfterSlider'
+import AccessCodeEntry from '../components/AccessCodeEntry'
 import { useNav } from '../nav'
 import { loadSavedDesign } from '../savedDesign'
 import { DEMO_MODE } from '../services/replicate'
@@ -238,6 +239,11 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
               </button>
             </>
           )}
+
+          {/* 访问码入口：输入有效码解锁真实 AI 清理 / 渲染（否则保持 DEMO） */}
+          <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.lightGray}` }}>
+            <AccessCodeEntry />
+          </div>
         </div>
 
         {/* ── Right: Preview / Drop Zone ── */}

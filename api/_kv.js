@@ -38,3 +38,9 @@ export async function consume(code, field) {
   }
   return { ok: true, left }
 }
+
+// Give back one use of `field` — called when the provider call failed, so the
+// user isn't charged for a render/clean that never produced a result.
+export async function refund(code, field) {
+  try { await redis.hincrby(keyFor(code), field, 1) } catch { /* ignore */ }
+}

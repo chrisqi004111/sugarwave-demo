@@ -145,7 +145,12 @@ export async function cleanImageViaCode(imageFile, maskDataUrl, code) {
     body: JSON.stringify({ code, image, mask }),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `clean failed (${res.status})`)
+  if (!res.ok) {
+    const detail = data.detail
+      ? ' — ' + (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)).slice(0, 300)
+      : ''
+    throw new Error((data.error || `clean failed (${res.status})`) + detail)
+  }
   let output = data.output
   if (data.status !== 'succeeded' || !output) {
     output = await pollCleanStatus(data.id)

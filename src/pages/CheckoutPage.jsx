@@ -40,7 +40,7 @@ export default function CheckoutPage() {
           <p style={kicker}>Checkout</p>
           <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 24 }}>Checkout</h1>
           <p style={{ color: C.gray, fontSize: 14, marginBottom: 20 }}>Your cart is empty.</p>
-          <button onClick={() => navigate('shop')} style={ghostBtn}>BROWSE SHOP →</button>
+          <span style={{ ...ghostBtn, cursor: 'default', display: 'inline-block' }}>BROWSE SHOP →</span>
         </Container>
       </Page>
     )

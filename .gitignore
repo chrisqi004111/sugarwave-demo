@@ -31,3 +31,6 @@ dist/
 .DS_Store
 
 .claude/
+
+# Internal source data — not needed by the site, keep private
+sugarwave_price_list_2026.xlsx

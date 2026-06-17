@@ -1,7 +1,11 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import Navbar from '../components/Navbar'
+import { useNav } from '../nav'
+import { sceneLabSidebar } from '../sceneLabLayout'
+import { cleanImage, DEMO_MODE, DEMO_FALLBACK_SCENE } from '../services/replicate'
 
-export default function CleanPage({ image, onDone }) {
+export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone }) {
+  const { navigate } = useNav()
   const containerRef = useRef(null)
   const imgRef = useRef(null)
   const overlayRef = useRef(null)
@@ -20,6 +24,8 @@ export default function CleanPage({ image, onDone }) {
   const [cleanedImageUrl, setCleanedImageUrl] = useState(null)
   const [error, setError] = useState(null)
   const [showComparison, setShowComparison] = useState(false)
+  // demo 模式下，用户自定义上传无法真实清理时显示的提示卡片
+  const [demoUploadNotice, setDemoUploadNotice] = useState(false)
 
   // ── 关键修复：useMemo 固定 imageUrl，避免每次 re-render 生成新 URL ──
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,6 +123,24 @@ export default function CleanPage({ image, onDone }) {
   async function handleAutoClean() {
     if (!image) return
     setError(null)
+
+    // ── DEMO MODE：绝不调用 Lamar API ──────────────────────────────
+    if (DEMO_MODE) {
+      if (!isPreset) {
+        // 用户自定义上传：真实清理需要 Live API，引导改用预设场景
+        setDemoUploadNotice(true)
+        return
+      }
+      // 预设场景：短暂 loading 后返回「已清理」的预设图（成片本身就是干净的）
+      setCleaning(true)
+      await new Promise(r => setTimeout(r, 1200))
+      setCleanedImageUrl(presetCleanedUrl || DEMO_FALLBACK_SCENE)
+      setCleaned(true)
+      setCleaning(false)
+      return
+    }
+
+    // ── LIVE MODE：真实 Lamar 清理（行为保持不变）──────────────────
     const mask = maskRef.current
     if (!mask) return
     const data = mask.getContext('2d').getImageData(0, 0, mask.width, mask.height)
@@ -125,7 +149,6 @@ export default function CleanPage({ image, onDone }) {
 
     setCleaning(true)
     try {
-      const { cleanImage } = await import('../services/replicate')
       const maskCtx = mask.getContext('2d')
       const maskData = maskCtx.getImageData(0, 0, mask.width, mask.height)
       const finalMask = document.createElement('canvas')
@@ -145,7 +168,9 @@ export default function CleanPage({ image, onDone }) {
 
       const result = await cleanImage(image, finalMask.toDataURL('image/png'))
       const outputUrl = Array.isArray(result) ? result[0] : result
-      setCleanedImageUrl(outputUrl + '?t=' + Date.now())
+      // 缓存破坏只对远程 http(s) 结果有意义；blob:/data: URL 加 ?t= 会失效，原样使用。
+      const finalUrl = /^https?:/.test(outputUrl) ? outputUrl + '?t=' + Date.now() : outputUrl
+      setCleanedImageUrl(finalUrl)
       setCleaned(true)
     } catch (err) {
       console.error(err)
@@ -181,7 +206,7 @@ export default function CleanPage({ image, onDone }) {
         padding: '10px 24px', borderBottom: `1px solid ${C.lightGray}`,
       }}>
         <span style={{ fontSize: 11, color: C.gray, letterSpacing: 1 }}>STEP 1 — CLEAN SCENE</span>
-        <button onClick={() => onDone(cleanedImageUrl || imageUrl)} style={{
+        <button onClick={() => navigate('scene-lab')} style={{
           background: 'none', border: `1px solid ${C.border}`,
           padding: '6px 20px', fontSize: 11, letterSpacing: 1.5, cursor: 'pointer',
         }}>EXIT</button>
@@ -192,13 +217,24 @@ export default function CleanPage({ image, onDone }) {
           flex: 1, position: 'relative', overflow: 'hidden',
           background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {/* 毛玻璃背景：仅存在于灰色工作区内，被容器的 overflow:hidden 裁出清晰边界，
+              不影响右侧工具栏 / 顶部导航 / 按钮。填满图片未覆盖的留白处。*/}
+          {(cleanedImageUrl || imageUrl) && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              backgroundImage: `url(${(cleaned && cleanedImageUrl) ? (showComparison ? imageUrl : cleanedImageUrl) : imageUrl})`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'blur(24px) brightness(0.92)', transform: 'scale(1.1)',
+            }} />
+          )}
+
           {cleaned && cleanedImageUrl ? (
-            <div style={{ width: '100%', height: '100%', position: 'relative',
-              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            // 以「可用高度」为基准：图片填满工作区高度，左右留白由毛玻璃填充
+            <div style={{ position: 'relative', height: '100%' }}>
               <img
                 src={showComparison ? imageUrl : cleanedImageUrl}
                 alt="result"
-                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                style={{ display: 'block', height: '100%', width: 'auto', objectFit: 'contain' }}
               />
               <div style={{
                 position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
@@ -215,16 +251,14 @@ export default function CleanPage({ image, onDone }) {
               </div>
             </div>
           ) : (
-            <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+            // 画笔视图：图片以高度为基准填满工作区；overlay 画布始终 100%×100% 贴合图片
+            <div style={{ position: 'relative', height: '100%' }}>
               <img
                 ref={imgRef}
                 src={imageUrl}
                 alt="space"
                 onLoad={initCanvases}
-                style={{
-                  display: 'block', maxWidth: '100%',
-                  maxHeight: 'calc(100vh - 112px)', objectFit: 'contain',
-                }}
+                style={{ display: 'block', height: '100%', width: 'auto', objectFit: 'contain' }}
               />
               <canvas
                 ref={overlayRef}
@@ -250,7 +284,9 @@ export default function CleanPage({ image, onDone }) {
             }}>
               <div style={{ fontSize: 32 }}>✨</div>
               <p style={{ fontSize: 14, letterSpacing: 1 }}>AI is cleaning your space...</p>
-              <p style={{ fontSize: 12, color: C.gray }}>This may take 15–30 seconds</p>
+              <p style={{ fontSize: 12, color: C.gray }}>
+                {DEMO_MODE ? 'Preparing your scene...' : 'This may take 15–30 seconds'}
+              </p>
             </div>
           )}
 
@@ -262,10 +298,48 @@ export default function CleanPage({ image, onDone }) {
               borderRadius: 4, maxWidth: '80%', textAlign: 'center',
             }}>{error}</div>
           )}
+
+          {/* ── DEMO 模式：自定义上传无法真实清理时的引导卡片 ── */}
+          {demoUploadNotice && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.94)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            }}>
+              <div style={{
+                maxWidth: 460, textAlign: 'center',
+                border: `1px solid ${C.lightGray}`, borderRadius: 6,
+                padding: '32px 36px', background: C.bg,
+                boxShadow: '0 8px 28px rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 14 }}>✨</div>
+                <p style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.5, marginBottom: 12 }}>
+                  Demo Mode
+                </p>
+                <p style={{ fontSize: 13, color: C.gray, lineHeight: 1.7, marginBottom: 24 }}>
+                  Custom image cleanup requires Live API mode. For this portfolio demo,
+                  continue with a preset scene to experience the full flow.
+                </p>
+                <button onClick={() => onDone(DEMO_FALLBACK_SCENE)} style={{
+                  width: '100%', padding: '12px', background: C.black, color: C.bg,
+                  border: 'none', fontSize: 11, letterSpacing: 2, cursor: 'pointer',
+                  marginBottom: 10,
+                }}>
+                  CONTINUE WITH DEMO SCENE →
+                </button>
+                <button onClick={() => setDemoUploadNotice(false)} style={{
+                  width: '100%', padding: '10px', background: 'none',
+                  border: `1px solid ${C.border}`, fontSize: 11, letterSpacing: 1.5,
+                  color: C.black, cursor: 'pointer',
+                }}>
+                  BACK
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{
-          width: 220, borderLeft: `1px solid ${C.lightGray}`,
+          ...sceneLabSidebar,
           padding: 24, display: 'flex', flexDirection: 'column', gap: 20,
         }}>
           <div style={{ fontStyle: 'italic', fontSize: 16, letterSpacing: 2 }}>sugarwave</div>

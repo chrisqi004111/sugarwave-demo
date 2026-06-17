@@ -11,12 +11,52 @@ const BASE = '/api/replicate/v1'
 const MODEL_VERSION = 'cdac78a1bec5b23c07fd29692fb70baa513ea403a39e643c48ec5edadb15fe72'
 const MODEL_ENDPOINT = `${BASE}/predictions`
 
+// ── DEMO_MODE ──────────────────────────────────────────────────────
+// 当 VITE_DEMO_MODE=true 时，跳过真实 Lamar(lama-cleaner) API，不消耗额度。
+// UX 由 CleanPage 控制：预设场景直接返回「已清理」的预设图；用户自定义上传
+// 则提示「自定义清理需要 Live API」并引导改用 demo 场景（见 CleanPage）。
+// 这里的 cleanImage() 仍保留一个安全兜底分支，避免任何遗漏调用换错图。
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
+
+// demo 模式下，自定义上传无法真实清理时统一引导到的预设「已清理」场景。
+export const DEMO_FALLBACK_SCENE = '/spaces/living-room.jpg'
+
+// File/Blob → 可直接 <img src> 的 URL；已经是 URL 字符串则原样返回。
+function toUsableUrl(image) {
+  if (image instanceof File || image instanceof Blob) return URL.createObjectURL(image)
+  return image
+}
+
 /**
+ * Public entry — keeps the real Lamar behaviour, adds a safe demo path.
+ *
  * @param {File} imageFile   - 原始图片 File 对象
  * @param {string} maskDataUrl - 黑底白色 mask，data:image/png;base64,...
  * @returns {Promise<string>} - 清理后的图片 URL
  */
 export async function cleanImage(imageFile, maskDataUrl) {
+  if (DEMO_MODE) {
+    console.log('DEMO_MODE cleanup: returning original image (skipping Lamar API)')
+    return toUsableUrl(imageFile)
+  }
+
+  console.log('LIVE cleanup: calling Lamar API')
+  try {
+    return await cleanImageLive(imageFile, maskDataUrl)
+  } catch (err) {
+    console.warn('LIVE cleanup failed: keeping original image', err)
+    return toUsableUrl(imageFile)
+  }
+}
+
+/**
+ * 真实 Lamar (lama-cleaner) API 调用 —— 逻辑保持不变。
+ *
+ * @param {File} imageFile
+ * @param {string} maskDataUrl
+ * @returns {Promise<string>}
+ */
+async function cleanImageLive(imageFile, maskDataUrl) {
   const imageBase64 = await fileToBase64(imageFile)
   const maskBase64 = maskDataUrl.split(',')[1]
 

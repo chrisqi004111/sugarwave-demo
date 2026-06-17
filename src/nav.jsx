@@ -8,6 +8,7 @@ export const ROUTES = {
   product: '/shop/:slug',
   cart: '/cart',
   checkout: '/checkout',
+  'order-success': '/order/success',
   'scene-lab': '/scene-lab',
   'try-on': '/scene-lab/furniture-try-on',
   'brand-space': '/scene-lab/brand-space',
@@ -22,7 +23,7 @@ export const ROUTES = {
 
 // Which top-level nav item is "active" for a given page key.
 export const TOP_LEVEL = {
-  shop: 'shop', product: 'shop', cart: 'shop', checkout: 'shop',
+  shop: 'shop', product: 'shop', cart: 'shop', checkout: 'shop', 'order-success': 'shop',
   'scene-lab': 'scene-lab', 'try-on': 'scene-lab', 'brand-space': 'scene-lab',
   brief: 'scene-lab', 'lead-success': 'scene-lab',
   loading: 'scene-lab', clean: 'scene-lab', select: 'scene-lab',

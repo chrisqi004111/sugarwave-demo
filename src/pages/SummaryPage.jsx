@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
+import { sceneLabSidebar } from '../sceneLabLayout'
+import { useNav } from '../nav'
+import { addToCart } from '../cart'
+import { track } from '../analytics'
 
 const C = { bg: '#fff', black: '#000', gray: '#888', lightGray: '#e0e0e0', border: '#d0d0d0' }
 
-export default function SummaryPage({ beforeImage, afterImage, items = [], onBack }) {
+export default function SummaryPage({ beforeImage, afterImage, placement, items = [], onBack }) {
+  const { navigate } = useNav()
   const [showBefore, setShowBefore] = useState(false)
 
-  const displayImage = showBefore ? beforeImage : afterImage
+  // After 视图兜底：① 有成片(afterImage：预设/实时截图) → 直接显示；
+  // ② 否则若有 DEMO 放置叠层 → 用「清理后场景 + 产品 PNG 叠层」还原；③ 都没有 → 只显示清理后场景。
+  const overlayItems = (!showBefore && !afterImage && placement?.items?.length) ? placement.items : null
+  const displayImage = showBefore ? beforeImage : (afterImage || beforeImage)
 
   // 去重：同一产品可能被添加多次，合并计算数量
   const grouped = items.reduce((acc, item) => {
@@ -22,6 +30,16 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
   const subtotal = productList.reduce((s, i) => s + i.price * i.qty, 0)
   const delivery = 55
   const total = subtotal + delivery
+
+  // ADD TO CART：把「Your Design」里选中的产品加入共享购物车，顶部购物车数量即时更新。
+  function handleAddToCart() {
+    if (productList.length === 0) return
+    productList.forEach(item =>
+      addToCart({ slug: item.productId, name: item.name, price: item.price, image: item.src, dimensions: item.dimensions }, item.qty)
+    )
+    track('add_to_cart', { from: 'scene_lab_summary', lines: productList.length, total: subtotal })
+    navigate('cart')
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, paddingTop: 64 }}>
@@ -44,21 +62,56 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
 
       <div style={{ display: 'flex', height: 'calc(100vh - 112px)' }}>
 
-        {/* ── 左侧图片区 ── */}
-        <div style={{ flex: 1, background: '#f2f2f2', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* ── 左侧图片区：图片以「可用高度」为基准最大化（上下不留边），
+            剩余左右留白用全幅毛玻璃填充；overflow:hidden 兜底，不溢出到右侧 cart / 导航。*/}
+        <div style={{
+          flex: 1, background: '#f2f2f2', position: 'relative',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          {/* 全幅毛玻璃背景：被本区域 overflow:hidden 裁出清晰边界，跟随 Before/After 当前图 */}
+          {displayImage && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              backgroundImage: `url(${displayImage})`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'blur(24px) brightness(0.92)', transform: 'scale(1.1)',
+            }} />
+          )}
+          {/* 图片填满工作区高度、保持原比例、不裁切；左右留白显示毛玻璃。
+              DEMO 无成片时，在场景图上按比例还原放置的产品 PNG 叠层。*/}
           {displayImage ? (
-            <img
-              src={displayImage}
-              alt={showBefore ? 'before' : 'after'}
-              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-            />
+            <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
+              <img
+                src={displayImage}
+                alt={showBefore ? 'before' : 'after'}
+                style={{ display: 'block', height: '100%', width: 'auto', objectFit: 'contain' }}
+              />
+              {overlayItems && overlayItems.map((o, i) => (
+                <img
+                  key={i}
+                  src={o.src}
+                  alt={o.name || 'product'}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                  style={{
+                    position: 'absolute',
+                    left: `${o.xRatio * 100}%`, top: `${o.yRatio * 100}%`,
+                    width: `${o.wRatio * 100}%`, height: 'auto',
+                    transform: `translate(-50%, -50%) rotate(${o.rotation || 0}deg)`,
+                    opacity: o.opacity ?? 1,
+                    pointerEvents: 'none',
+                    filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.35))',
+                  }}
+                />
+              ))}
+            </div>
           ) : (
-            <p style={{ color: C.gray, fontSize: 13, letterSpacing: 1 }}>FINAL SCENE</p>
+            <p style={{ position: 'relative', zIndex: 1, color: C.gray, fontSize: 13, letterSpacing: 1 }}>FINAL SCENE</p>
           )}
 
           {/* Before / After 切换 */}
           <div style={{
-            position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', zIndex: 2, bottom: 20, left: '50%', transform: 'translateX(-50%)',
             display: 'flex', border: `1px solid ${C.border}`, background: C.bg,
           }}>
             {['Before', 'After'].map((label) => (
@@ -77,7 +130,7 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
         </div>
 
         {/* ── 右侧产品清单 ── */}
-        <div style={{ width: 320, borderLeft: `1px solid ${C.lightGray}`, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...sceneLabSidebar, display: 'flex', flexDirection: 'column' }}>
 
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.lightGray}` }}>
             <div style={{ fontStyle: 'italic', fontSize: 16, letterSpacing: 2, marginBottom: 8 }}>sugarwave</div>
@@ -119,7 +172,7 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
                       )}
                     </div>
                     <p style={{ fontSize: 11, color: C.gray, marginBottom: 4 }}>{item.category || ''}</p>
-                    <p style={{ fontSize: 12 }}>${item.price}{item.qty > 1 ? ` × ${item.qty} = $${item.price * item.qty}` : ''}</p>
+                    <p style={{ fontSize: 12 }}>€{item.price}{item.qty > 1 ? ` × ${item.qty} = €${item.price * item.qty}` : ''}</p>
                   </div>
                 </div>
               ))
@@ -129,9 +182,9 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
           {/* 费用明细 */}
           <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.lightGray}` }}>
             {[
-              ['Subtotal', `$${subtotal}`],
-              ['Customization Fee', '$0'],
-              ['Delivery & Setup', `$${delivery}`],
+              ['Subtotal', `€${subtotal}`],
+              ['Customization Fee', '€0'],
+              ['Delivery & Setup', `€${delivery}`],
             ].map(([label, val]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, color: C.gray }}>{label}</span>
@@ -140,12 +193,19 @@ export default function SummaryPage({ beforeImage, afterImage, items = [], onBac
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.lightGray}` }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Estimated Total</span>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>${total}</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>€{total}</span>
             </div>
           </div>
 
           <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button style={{ width: '100%', padding: '12px', background: C.black, color: C.bg, border: 'none', fontSize: 11, letterSpacing: 2, cursor: 'pointer' }}>
+            <button
+              onClick={handleAddToCart}
+              disabled={productList.length === 0}
+              style={{
+                width: '100%', padding: '12px', background: C.black, color: C.bg, border: 'none',
+                fontSize: 11, letterSpacing: 2, cursor: productList.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: productList.length === 0 ? 0.4 : 1,
+              }}>
               ADD TO CART
             </button>
             <div style={{ display: 'flex', gap: 8 }}>

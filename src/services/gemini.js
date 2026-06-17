@@ -10,17 +10,17 @@ Analyze this room image and return a JSON response with:
 1. The room's style (e.g. minimal, modern, nordic, mid-century, industrial, luxury)
 2. The dominant colors
 3. Which of these Sugarwave products would fit best in this space:
-   - boop: a minimal organic table lamp, suits modern/nordic/minimal styles
-   - lianlian: an organic sculptural lamp, suits modern/artistic styles  
-   - forest: a nature-inspired floor lamp, suits nordic/natural/minimal styles
-   - scratch: an industrial object/vessel, suits industrial/modern styles
+   - boop: a soft rounded robotic-printed stool, suits modern/nordic/minimal styles
+   - fluffy: an organic ribbed vase, suits modern/artistic styles
+   - ripple: a sculptural robotic-printed side table, suits modern/minimal styles
+   - scratch: an industrial textured vessel, suits industrial/modern styles
 
 Return ONLY valid JSON in this exact format, no other text:
 {
   "style": "minimal",
   "colors": ["warm white", "natural wood", "beige"],
-  "recommended": ["boop", "forest"],
-  "reason": "The space has a warm minimal aesthetic that would complement Boop's organic form and Forest's natural inspiration."
+  "recommended": ["boop", "ripple"],
+  "reason": "The space has a warm minimal aesthetic that would complement Boop's soft form and Ripple's sculptural lines."
 }`
 
   const response = await fetch(
@@ -62,7 +62,7 @@ Return ONLY valid JSON in this exact format, no other text:
     return {
       style: 'modern',
       colors: ['neutral'],
-      recommended: ['boop', 'forest'],
+      recommended: ['boop', 'ripple'],
       reason: 'AI analysis complete.',
     }
   }

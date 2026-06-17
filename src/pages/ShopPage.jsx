@@ -53,7 +53,7 @@ export default function ShopPage() {
               <Placeholder src={p.image} label={p.name} />
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
                 <span style={{ fontSize: 16 }}>{p.name}</span>
-                <span style={{ fontSize: 16, color: C.gray }}>${p.price}</span>
+                <span style={{ fontSize: 16, color: C.gray }}>€{p.price}</span>
               </div>
               <p style={{ fontSize: 14, color: C.gray, marginTop: 4 }}>{p.blurb}</p>
             </div>

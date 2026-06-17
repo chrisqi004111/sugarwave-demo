@@ -1,0 +1,92 @@
+{
+  "calla-amber": {
+    "name": "Calla — Amber",
+    "price": 360,
+    "dimensions": "43cm × 38cm × 28cm",
+    "tags": [
+      "organic",
+      "modern"
+    ],
+    "aiPick": false
+  },
+  "fluffy": {
+    "name": "Fluffy",
+    "price": 70,
+    "dimensions": "19cm × 15.5cm × 12cm",
+    "tags": [
+      "organic",
+      "modern"
+    ],
+    "aiPick": false
+  },
+  "boop": {
+    "name": "Boop",
+    "price": 180,
+    "dimensions": "18cm × 18cm × 16cm",
+    "tags": [
+      "minimal",
+      "modern"
+    ],
+    "aiPick": true
+  },
+  "starberry": {
+    "name": "Starberry",
+    "price": 0,
+    "dimensions": "standard size",
+    "tags": [
+      "playful",
+      "modern"
+    ],
+    "aiPick": false
+  },
+  "strawberrys": {
+    "name": "Strawberry",
+    "price": 0,
+    "dimensions": "standard size",
+    "tags": [
+      "playful",
+      "modern"
+    ],
+    "aiPick": false
+  },
+  "ripple-side-table-a-vanilla-noir": {
+    "name": "Ripple Table A — Vanilla Noir",
+    "price": 535,
+    "dimensions": "36cm × 30cm × 57cm",
+    "tags": [
+      "modern",
+      "minimal"
+    ],
+    "aiPick": true
+  },
+  "ripple-side-table-b-marble": {
+    "name": "Ripple Table B — Marble",
+    "price": 360,
+    "dimensions": "36cm × 30cm × 57cm",
+    "tags": [
+      "modern",
+      "minimal"
+    ],
+    "aiPick": true
+  },
+  "ripple-side-table-b-pomegranate-pattern": {
+    "name": "Ripple Table B — Pomegranate",
+    "price": 360,
+    "dimensions": "36cm × 30cm × 57cm",
+    "tags": [
+      "modern",
+      "minimal"
+    ],
+    "aiPick": false
+  },
+  "ripple-side-table-b-vanilla-noir": {
+    "name": "Ripple Table B — Vanilla Noir",
+    "price": 360,
+    "dimensions": "36cm × 30cm × 57cm",
+    "tags": [
+      "modern",
+      "minimal"
+    ],
+    "aiPick": true
+  }
+}

@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import Navbar from '../components/Navbar'
+import { DEMO_MODE } from '../services/replicate'
 
 const CANVAS_RATIO = 16 / 9
 
-export default function SceneLabPage({ onUpload }) {
+export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) {
   const [dragging, setDragging] = useState(false)
   const [imageFile, setImageFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -18,6 +19,24 @@ export default function SceneLabPage({ onUpload }) {
     bg: '#ffffff', bgGray: '#f2f2f2', black: '#000000',
     gray: '#888888', lightGray: '#e0e0e0', border: '#d0d0d0',
   }
+
+  // 主/次 CTA 通用样式（按钮与 <label> 共用）
+  const primaryBtn = {
+    display: 'block', width: '100%', boxSizing: 'border-box',
+    border: `1px solid ${C.black}`, padding: '13px 24px', textAlign: 'center',
+    fontSize: 12, letterSpacing: 2, cursor: 'pointer',
+    background: C.black, color: C.bg, marginBottom: 12, transition: 'opacity 0.2s',
+  }
+  const secondaryBtn = {
+    display: 'block', width: '100%', boxSizing: 'border-box',
+    border: `1px solid ${C.black}`, padding: '13px 24px', textAlign: 'center',
+    fontSize: 12, letterSpacing: 2, cursor: 'pointer',
+    background: C.bg, color: C.black, marginBottom: 12, transition: 'background 0.2s, color 0.2s',
+  }
+  const onPrimaryEnter = e => { e.currentTarget.style.opacity = '0.85' }
+  const onPrimaryLeave = e => { e.currentTarget.style.opacity = '1' }
+  const onSecondaryEnter = e => { e.currentTarget.style.background = C.black; e.currentTarget.style.color = C.bg }
+  const onSecondaryLeave = e => { e.currentTarget.style.background = C.bg; e.currentTarget.style.color = C.black }
 
   function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return
@@ -75,7 +94,8 @@ export default function SceneLabPage({ onUpload }) {
       .then(r => r.blob())
       .then(blob => {
         const file = new File([blob], 'preset.jpg', { type: 'image/jpeg' })
-        onUpload(file)
+        // 预设场景：标记 isPreset，并带上「已清理」场景图（预设图本身就是干净的成片）。
+        onUpload(file, { isPreset: true, presetCleanedUrl: img })
       })
   }
 
@@ -101,27 +121,61 @@ export default function SceneLabPage({ onUpload }) {
             See it in your space<br />before it exists.
           </h1>
           <p style={{
-            fontSize: 14, color: C.gray, lineHeight: 1.8, marginBottom: 40,
+            fontSize: 14, color: C.gray, lineHeight: 1.8, marginBottom: 24,
           }}>
-            Upload a photo of your space. AI cleans the scene and recommends products that fit your style.
+            Upload a room photo or start with a demo scene. AI cleans the space,
+            helps place sugarwave products, generates a rendered preview, and turns
+            the visual decision into a custom quote request.
           </p>
 
-          <label style={{
-            display: 'block', border: `1px solid ${C.black}`,
-            padding: '13px 24px', textAlign: 'center',
-            fontSize: 12, letterSpacing: 2, cursor: 'pointer',
-            background: C.black, color: C.bg, marginBottom: 12,
-            transition: 'opacity 0.2s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            UPLOAD A PHOTO
-            <input type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => handleFile(e.target.files[0])} />
-          </label>
+          <p style={{
+            fontSize: 11, color: C.gray, lineHeight: 1.8, letterSpacing: 0.5,
+            marginBottom: 36,
+          }}>
+            Upload → AI Clean-up → Product Placement → AI Render → Quote Request
+          </p>
 
-          {previewUrl && (
+          {!previewUrl ? (
+            DEMO_MODE ? (
+              <>
+                {/* DEMO 模式：Try Demo Scene 为主 CTA，直接进入预设 Living Room 演示流程 */}
+                <button
+                  onClick={() => handlePresetClick(presetScenes[0].img)}
+                  style={primaryBtn}
+                  onMouseEnter={onPrimaryEnter}
+                  onMouseLeave={onPrimaryLeave}
+                >
+                  TRY DEMO SCENE
+                </button>
+                {/* 上传仍保留，但降级为次 CTA */}
+                <label style={secondaryBtn} onMouseEnter={onSecondaryEnter} onMouseLeave={onSecondaryLeave}>
+                  UPLOAD A PHOTO
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => handleFile(e.target.files[0])} />
+                </label>
+                <p style={{ fontSize: 11, color: C.gray, lineHeight: 1.7 }}>
+                  Custom image cleanup requires Live API mode. The demo scene shows the full experience.
+                </p>
+              </>
+            ) : (
+              <>
+                {/* LIVE 模式：上传为主 CTA（行为不变）*/}
+                <label style={primaryBtn} onMouseEnter={onPrimaryEnter} onMouseLeave={onPrimaryLeave}>
+                  UPLOAD A PHOTO
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => handleFile(e.target.files[0])} />
+                </label>
+                <button
+                  onClick={() => handlePresetClick(presetScenes[0].img)}
+                  style={secondaryBtn}
+                  onMouseEnter={onSecondaryEnter}
+                  onMouseLeave={onSecondaryLeave}
+                >
+                  TRY DEMO SCENE
+                </button>
+              </>
+            )
+          ) : (
             <>
               {isLandscape && (
                 <p style={{
@@ -131,15 +185,37 @@ export default function SceneLabPage({ onUpload }) {
                   ← Drag image to reframe →
                 </p>
               )}
-              <button onClick={() => onUpload(imageFile)} style={{
-                background: C.black, color: C.bg, border: 'none',
-                padding: '13px 24px', fontSize: 12, letterSpacing: 2,
-                cursor: 'pointer', transition: 'opacity 0.2s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+
+              {/* DEMO 模式上传路径：说明 + 「Continue with Demo Scene」主按钮 */}
+              {DEMO_MODE && (
+                <>
+                  <div style={{
+                    border: `1px solid ${C.lightGray}`, background: C.bgGray,
+                    padding: '12px 14px', marginBottom: 12,
+                    fontSize: 11, color: C.gray, lineHeight: 1.7,
+                  }}>
+                    Custom image cleanup requires <strong style={{ color: C.black }}>Live API mode</strong>.
+                    For this portfolio demo, continue with a preset scene to experience the full flow.
+                  </div>
+                  <button
+                    onClick={() => handlePresetClick(presetScenes[0].img)}
+                    style={primaryBtn}
+                    onMouseEnter={onPrimaryEnter}
+                    onMouseLeave={onPrimaryLeave}
+                  >
+                    CONTINUE WITH DEMO SCENE →
+                  </button>
+                </>
+              )}
+
+              {/* 用上传的照片继续：LIVE 为主路径（真实 API 清理）；DEMO 为次路径 */}
+              <button
+                onClick={() => onUpload(imageFile, { isPreset: false })}
+                style={DEMO_MODE ? secondaryBtn : primaryBtn}
+                onMouseEnter={DEMO_MODE ? onSecondaryEnter : onPrimaryEnter}
+                onMouseLeave={DEMO_MODE ? onSecondaryLeave : onPrimaryLeave}
               >
-                CONTINUE →
+                {DEMO_MODE ? 'CONTINUE WITH MY PHOTO →' : 'CONTINUE →'}
               </button>
             </>
           )}
@@ -213,6 +289,47 @@ export default function SceneLabPage({ onUpload }) {
                 </div>
               )}
             </>
+          ) : savedScene ? (
+            /* SAVE TO LIBRARY 保存过场景：右侧默认展示「上次使用的照片」。点击可继续编辑该场景。*/
+            <div
+              onClick={() => onContinueSaved?.()}
+              style={{
+                width: '100%', height: '100%', minHeight: 480, position: 'relative',
+                cursor: 'pointer', overflow: 'hidden',
+              }}
+            >
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${savedScene})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                filter: 'blur(24px) brightness(0.85)', transform: 'scale(1.1)',
+              }} />
+              <img
+                src={savedScene}
+                alt="saved scene"
+                onError={e => { e.currentTarget.style.display = 'none' }}
+                style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  height: '100%', width: 'auto', maxWidth: '100%', objectFit: 'contain',
+                  display: 'block', userSelect: 'none',
+                }}
+              />
+              <div style={{
+                position: 'absolute', top: 16, left: 16,
+                background: 'rgba(0,0,0,0.55)', color: '#fff',
+                fontSize: 10, letterSpacing: 2, padding: '5px 12px',
+              }}>
+                FROM YOUR LIBRARY
+              </div>
+              <div style={{
+                position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.55)', color: '#fff',
+                fontSize: 11, letterSpacing: 1.5, padding: '6px 16px', pointerEvents: 'none',
+              }}>
+                CONTINUE WITH THIS SCENE →
+              </div>
+            </div>
           ) : (
             <div style={{
               width: '100%', height: '100%', minHeight: 480,
@@ -249,26 +366,40 @@ export default function SceneLabPage({ onUpload }) {
               key={scene.name}
               onClick={() => handlePresetClick(scene.img)}
               style={{
-                flex: 1, aspectRatio: '16/9', cursor: 'pointer',
-                position: 'relative', overflow: 'hidden', background: C.bgGray,
-                transition: 'opacity 0.2s',
+                flex: 1, cursor: 'pointer',
+                border: `1px solid ${C.lightGray}`,
+                background: C.bg, overflow: 'hidden',
+                transition: 'border-color 0.2s',
               }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = C.black
+                e.currentTarget.querySelector('[data-cta]').style.color = C.black
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = C.lightGray
+                e.currentTarget.querySelector('[data-cta]').style.color = C.gray
+              }}
             >
-              <img
-                src={scene.img}
-                alt={scene.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                onError={e => { e.target.style.display = 'none' }}
-              />
               <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                padding: '32px 14px 12px',
-                background: 'linear-gradient(transparent, rgba(0,0,0,0.45))',
+                aspectRatio: '16/9', position: 'relative',
+                overflow: 'hidden', background: C.bgGray,
               }}>
-                <span style={{ fontSize: 12, letterSpacing: 1, color: '#fff' }}>
+                <img
+                  src={scene.img}
+                  alt={scene.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+              </div>
+              <div style={{
+                padding: '14px 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: 13, letterSpacing: 0.5, color: C.black }}>
                   {scene.name}
+                </span>
+                <span data-cta style={{ fontSize: 12, letterSpacing: 0.5, color: C.gray, transition: 'color 0.2s' }}>
+                  Use this scene →
                 </span>
               </div>
             </div>

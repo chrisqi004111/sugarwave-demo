@@ -30,7 +30,7 @@ export default function ProductDetailPage() {
           <div>
             <p style={kicker}>{product.series}</p>
             <h1 style={{ fontSize: 32, fontWeight: 400, margin: '6px 0 12px' }}>{product.name}</h1>
-            <p style={{ fontSize: 20, color: C.black, marginBottom: 24 }}>${product.price}</p>
+            <p style={{ fontSize: 20, color: C.black, marginBottom: 24 }}>€{product.price}</p>
             <p style={{ fontSize: 14, color: C.gray, lineHeight: 1.8, marginBottom: 32 }}>
               {product.blurb} Robotic-printed to order in recycled material — each piece
               is made on demand and can be returned to be remade.

@@ -18,7 +18,7 @@ export default function CartPage() {
           <p style={kicker}>Cart</p>
           <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 24 }}>Your Cart</h1>
           <p style={{ marginBottom: 20, color: C.gray, fontSize: 14 }}>Your cart is empty.</p>
-          <button onClick={() => navigate('shop')} style={ghostBtn}>BROWSE SHOP →</button>
+          <span style={{ ...ghostBtn, cursor: 'default', display: 'inline-block' }}>BROWSE SHOP →</span>
         </Container>
       </Page>
     )

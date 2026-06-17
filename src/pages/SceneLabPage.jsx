@@ -1,10 +1,29 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Navbar from '../components/Navbar'
+import BeforeAfterSlider from '../components/BeforeAfterSlider'
+import { useNav } from '../nav'
+import { loadSavedDesign } from '../savedDesign'
 import { DEMO_MODE } from '../services/replicate'
 
 const CANVAS_RATIO = 16 / 9
 
+// 首页默认范例：右侧 Before/After 滑块用的成对图（同一房间，前=空/后=摆好产品）。
+// 放在 public/scene-lab/ 下；缺图时自动回退为上传拖放区，不破页。
+const LANDING_BEFORE = '/scene-lab/before.png'
+const LANDING_AFTER = '/scene-lab/after.png'
+
 export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) {
+  const { navigate } = useNav()
+  // 最近一次保存的「最终设计」（来自 Your Design 页的 SAVE，存在 localStorage）。
+  const [savedDesign] = useState(() => loadSavedDesign())
+  // 首页范例图是否存在：加载失败则回退为拖放上传区。
+  const [landingArtOk, setLandingArtOk] = useState(true)
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => setLandingArtOk(true)
+    img.onerror = () => setLandingArtOk(false)
+    img.src = LANDING_BEFORE
+  }, [])
   const [dragging, setDragging] = useState(false)
   const [imageFile, setImageFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -289,6 +308,59 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 </div>
               )}
             </>
+          ) : savedDesign ? (
+            /* 最近保存的「最终设计」：静态展示（非滑块），点击查看/继续。来自 Your Design 页 SAVE。 */
+            <div style={{ width: '100%', height: '100%', minHeight: 480, position: 'relative', overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${savedDesign.afterImage || savedDesign.beforeImage})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                filter: 'blur(24px) brightness(0.9)', transform: 'scale(1.1)',
+              }} />
+              {/* 最终设计：成片，或 场景图 + 产品叠层 */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', height: '100%' }}>
+                <img
+                  src={savedDesign.afterImage || savedDesign.beforeImage}
+                  alt="saved design"
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                  style={{ height: '100%', width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' }}
+                />
+                {!savedDesign.afterImage && savedDesign.placement?.items?.map((o, i) => (
+                  <img
+                    key={i}
+                    src={o.src}
+                    alt=""
+                    onError={e => { e.currentTarget.style.display = 'none' }}
+                    style={{
+                      position: 'absolute',
+                      left: `${o.xRatio * 100}%`, top: `${o.yRatio * 100}%`,
+                      width: `${o.wRatio * 100}%`, height: 'auto',
+                      transform: `translate(-50%, -50%) rotate(${o.rotation || 0}deg)`,
+                      opacity: o.opacity ?? 1, pointerEvents: 'none',
+                      filter: 'drop-shadow(0 8px 14px rgba(0,0,0,0.3))',
+                    }}
+                  />
+                ))}
+              </div>
+              <div style={{
+                position: 'absolute', top: 16, left: 16,
+                background: 'rgba(255,255,255,0.92)', color: C.black,
+                fontSize: 10, letterSpacing: 1.5, padding: '5px 12px',
+                border: `1px solid ${C.lightGray}`,
+              }}>
+                Last saved design
+              </div>
+              <div
+                onClick={() => navigate('summary')}
+                style={{
+                  position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+                  background: C.black, color: '#fff', fontSize: 11, letterSpacing: 1.5,
+                  padding: '8px 18px', cursor: 'pointer',
+                }}
+              >
+                VIEW SAVED DESIGN →
+              </div>
+            </div>
           ) : savedScene ? (
             /* SAVE TO LIBRARY 保存过场景：右侧默认展示「上次使用的照片」。点击可继续编辑该场景。*/
             <div
@@ -328,6 +400,25 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 fontSize: 11, letterSpacing: 1.5, padding: '6px 16px', pointerEvents: 'none',
               }}>
                 CONTINUE WITH THIS SCENE →
+              </div>
+            </div>
+          ) : landingArtOk ? (
+            /* 默认：Before/After 范例滑块（无保存设计时展示，替代灰色空背景）。
+               拖放上传仍可用（drop 处理在外层容器上）。*/
+            <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 480, overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${LANDING_AFTER})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                filter: 'blur(28px) brightness(0.9)', transform: 'scale(1.1)',
+              }} />
+              <div style={{ position: 'absolute', inset: 0 }}>
+                <BeforeAfterSlider
+                  fill
+                  beforeSrc={LANDING_BEFORE}
+                  after={<img src={LANDING_AFTER} alt="after" draggable={false}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />}
+                />
               </div>
             </div>
           ) : (

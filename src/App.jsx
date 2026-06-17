@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { NavContext } from './nav'
+import { loadSavedDesign } from './savedDesign'
 
 // Top-level pages (new IA)
 import HomePage from './pages/HomePage'
@@ -33,14 +34,19 @@ export default function App() {
   const [page, setPage] = useState('scene-lab')
   const [params, setParams] = useState({})
 
+  // Hydrate the "Your Design" state from the last saved design (localStorage),
+  // so the landing-page "View saved design" CTA can re-open the summary even
+  // after a reload. A fresh Try-On flow overwrites all of this normally.
+  const [bootSaved] = useState(loadSavedDesign)
+
   // Try-On flow state (unchanged behaviour, now reached via Scene Lab)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [sceneMeta, setSceneMeta] = useState({})   // { isPreset, presetCleanedUrl }
-  const [cleanedImage, setCleanedImage] = useState(null)
+  const [cleanedImage, setCleanedImage] = useState(bootSaved?.beforeImage ?? null)
   const [finalScene, setFinalScene] = useState(null)
-  const [sceneItems, setSceneItems] = useState([])
-  const [scenePlacement, setScenePlacement] = useState(null)  // DEMO 放置叠层数据（比例）
-  const [demoAfter, setDemoAfter] = useState(null)            // DEMO 预设成片（若有）
+  const [sceneItems, setSceneItems] = useState(bootSaved?.items ?? [])
+  const [scenePlacement, setScenePlacement] = useState(bootSaved?.placement ?? null)  // DEMO 放置叠层数据（比例）
+  const [demoAfter, setDemoAfter] = useState(bootSaved?.afterImage ?? null)           // DEMO 预设成片（若有）
   const [trialMode, setTrialMode] = useState(null)           // SelectPage 选择的进入模式 { mode, defaultTab }
   const [savedSession, setSavedSession] = useState(null)     // SAVE TO LIBRARY 保存的完整会话（场景图 + 摆放进度）
   const [resumeSession, setResumeSession] = useState(null)   // 「Continue」时注入 TrialPage 的初始进度（null = 全新开始）

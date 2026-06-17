@@ -1,20 +1,48 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
+import BeforeAfterSlider from '../components/BeforeAfterSlider'
 import { sceneLabSidebar } from '../sceneLabLayout'
 import { useNav } from '../nav'
 import { addToCart } from '../cart'
+import { saveDesign } from '../savedDesign'
 import { track } from '../analytics'
 
 const C = { bg: '#fff', black: '#000', gray: '#888', lightGray: '#e0e0e0', border: '#d0d0d0' }
 
 export default function SummaryPage({ beforeImage, afterImage, placement, items = [], onBack }) {
   const { navigate } = useNav()
-  const [showBefore, setShowBefore] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  // After 视图兜底：① 有成片(afterImage：预设/实时截图) → 直接显示；
-  // ② 否则若有 DEMO 放置叠层 → 用「清理后场景 + 产品 PNG 叠层」还原；③ 都没有 → 只显示清理后场景。
-  const overlayItems = (!showBefore && !afterImage && placement?.items?.length) ? placement.items : null
-  const displayImage = showBefore ? beforeImage : (afterImage || beforeImage)
+  // AFTER 视图兜底链：① 有成片(afterImage：预设/实时截图) → 直接显示；
+  // ② 否则若有 DEMO 放置叠层 → 用「清理后场景 + 产品 PNG 叠层」合成；③ 都没有 → 只显示清理后场景。
+  const overlayItems = (!afterImage && placement?.items?.length) ? placement.items : null
+  const bgImage = afterImage || beforeImage  // 毛玻璃背景跟随 AFTER 图
+
+  const imgFill = { width: '100%', height: '100%', objectFit: 'contain', display: 'block' }
+  // AFTER 图层内容：成片 / 场景图 + 产品叠层 / 仅场景图（都不破页）。
+  const afterNode = afterImage ? (
+    <img src={afterImage} alt="after" draggable={false} style={imgFill} />
+  ) : (
+    <>
+      <img src={beforeImage} alt="after" draggable={false} style={imgFill} />
+      {overlayItems && overlayItems.map((o, i) => (
+        <img
+          key={i}
+          src={o.src}
+          alt={o.name || 'product'}
+          onError={e => { e.currentTarget.style.display = 'none' }}
+          style={{
+            position: 'absolute',
+            left: `${o.xRatio * 100}%`, top: `${o.yRatio * 100}%`,
+            width: `${o.wRatio * 100}%`, height: 'auto',
+            transform: `translate(-50%, -50%) rotate(${o.rotation || 0}deg)`,
+            opacity: o.opacity ?? 1, pointerEvents: 'none',
+            filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.35))',
+          }}
+        />
+      ))}
+    </>
+  )
 
   // 去重：同一产品可能被添加多次，合并计算数量
   const grouped = items.reduce((acc, item) => {
@@ -41,6 +69,21 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
     navigate('cart')
   }
 
+  // SAVE：把当前「最终设计」存到 localStorage，回到 Scene Lab 首页右侧自动展示。
+  function handleSave() {
+    saveDesign({
+      beforeImage,                     // 清理后的场景图
+      afterImage: afterImage || null,  // 成片（若有）
+      placement: placement || null,    // 产品叠层（无成片时用于合成预览）
+      items,                           // 选中产品（含图/价/名）
+      total,                           // 预估总价
+      productCount: productList.length,
+    })
+    track('save_design', { from: 'scene_lab_summary', lines: productList.length, total })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, paddingTop: 64 }}>
       <Navbar activePage="SCENE LAB" />
@@ -56,7 +99,7 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
         <h2 style={{ fontSize: 13, letterSpacing: 3, fontWeight: 500 }}>YOUR DESIGN</h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <button style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>SHARE</button>
-          <button style={{ border: `1px solid ${C.black}`, background: C.black, color: C.bg, padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>SAVE</button>
+          <button onClick={handleSave} style={{ border: `1px solid ${C.black}`, background: saved ? '#2d7a2d' : C.black, color: C.bg, padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer', borderColor: saved ? '#2d7a2d' : C.black }}>{saved ? 'SAVED ✓' : 'SAVE'}</button>
         </div>
       </div>
 
@@ -69,64 +112,24 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
         }}>
-          {/* 全幅毛玻璃背景：被本区域 overflow:hidden 裁出清晰边界，跟随 Before/After 当前图 */}
-          {displayImage && (
+          {/* 全幅毛玻璃背景：被本区域 overflow:hidden 裁出清晰边界，跟随 AFTER 图 */}
+          {bgImage && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 0,
-              backgroundImage: `url(${displayImage})`,
+              backgroundImage: `url(${bgImage})`,
               backgroundSize: 'cover', backgroundPosition: 'center',
               filter: 'blur(24px) brightness(0.92)', transform: 'scale(1.1)',
             }} />
           )}
-          {/* 图片填满工作区高度、保持原比例、不裁切；左右留白显示毛玻璃。
-              DEMO 无成片时，在场景图上按比例还原放置的产品 PNG 叠层。*/}
-          {displayImage ? (
+          {/* Before / After 拖拽对比滑块：左 Before(清理后场景)、右 After(成片或场景+叠层)。
+              两层共用同一舞台尺寸，容器尺寸稳定、不跳变。 */}
+          {beforeImage ? (
             <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-              <img
-                src={displayImage}
-                alt={showBefore ? 'before' : 'after'}
-                style={{ display: 'block', height: '100%', width: 'auto', objectFit: 'contain' }}
-              />
-              {overlayItems && overlayItems.map((o, i) => (
-                <img
-                  key={i}
-                  src={o.src}
-                  alt={o.name || 'product'}
-                  onError={e => { e.currentTarget.style.display = 'none' }}
-                  style={{
-                    position: 'absolute',
-                    left: `${o.xRatio * 100}%`, top: `${o.yRatio * 100}%`,
-                    width: `${o.wRatio * 100}%`, height: 'auto',
-                    transform: `translate(-50%, -50%) rotate(${o.rotation || 0}deg)`,
-                    opacity: o.opacity ?? 1,
-                    pointerEvents: 'none',
-                    filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.35))',
-                  }}
-                />
-              ))}
+              <BeforeAfterSlider beforeSrc={beforeImage} after={afterNode} />
             </div>
           ) : (
             <p style={{ position: 'relative', zIndex: 1, color: C.gray, fontSize: 13, letterSpacing: 1 }}>FINAL SCENE</p>
           )}
-
-          {/* Before / After 切换 */}
-          <div style={{
-            position: 'absolute', zIndex: 2, bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', border: `1px solid ${C.border}`, background: C.bg,
-          }}>
-            {['Before', 'After'].map((label) => (
-              <button
-                key={label}
-                onClick={() => setShowBefore(label === 'Before')}
-                style={{
-                  padding: '6px 20px', border: 'none', cursor: 'pointer',
-                  background: (label === 'Before') === showBefore ? C.black : C.bg,
-                  color: (label === 'Before') === showBefore ? C.bg : C.black,
-                  fontSize: 11, letterSpacing: 1,
-                }}
-              >{label}</button>
-            ))}
-          </div>
         </div>
 
         {/* ── 右侧产品清单 ── */}

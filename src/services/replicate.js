@@ -132,6 +132,74 @@ async function pollPrediction(id) {
   throw new Error('Timed out after 80 seconds')
 }
 
+// ── 经访问码走后端真实清理（生产环境）────────────────────────────────
+// 后端 /api/clean 校验码并扣 1 次 clean，再调用 Replicate。把图片+mask 缩到
+// 最长边 1024（控制请求体大小/时长），异步时轮询 /api/clean-status。
+// 返回 { url, left }（left = 该码剩余清理次数）。
+export async function cleanImageViaCode(imageFile, maskDataUrl, code) {
+  const { url: image, w, h } = await fileToScaledJpegDataUrl(imageFile, 1024)
+  const mask = await maskToScaledPngDataUrl(maskDataUrl, w, h)
+  const res = await fetch('/api/clean', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, image, mask }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `clean failed (${res.status})`)
+  let output = data.output
+  if (data.status !== 'succeeded' || !output) {
+    output = await pollCleanStatus(data.id)
+  }
+  const url = Array.isArray(output) ? output[0] : output
+  if (!url) throw new Error('clean returned no image')
+  return { url, left: data.left }
+}
+
+async function pollCleanStatus(id, maxAttempts = 40, interval = 2000) {
+  if (!id) throw new Error('no prediction id')
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, interval))
+    const res = await fetch(`/api/clean-status?id=${encodeURIComponent(id)}`)
+    const data = await res.json().catch(() => ({}))
+    if (data.status === 'succeeded') return data.output
+    if (data.status === 'failed' || data.status === 'canceled') throw new Error('clean ' + data.status)
+  }
+  throw new Error('clean timed out')
+}
+
+// File → JPEG dataURL，最长边 = maxSide（保持比例）；返回 { url, w, h }
+function fileToScaledJpegDataUrl(file, maxSide) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight))
+      const w = Math.round(img.naturalWidth * scale)
+      const h = Math.round(img.naturalHeight * scale)
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      c.getContext('2d').drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve({ url: c.toDataURL('image/jpeg', 0.92), w, h })
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
+// mask dataURL → PNG dataURL，缩到 w×h（与缩放后的图同尺寸，白=待清理区）
+function maskToScaledPngDataUrl(maskDataUrl, w, h) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      c.getContext('2d').drawImage(img, 0, 0, w, h)
+      resolve(c.toDataURL('image/png'))
+    }
+    img.onerror = reject
+    img.src = maskDataUrl
+  })
+}
+
 // ── File → base64 string（不含 data:xxx;base64, 前缀）────────────
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {

@@ -2,7 +2,8 @@ import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import Navbar from '../components/Navbar'
 import { useNav } from '../nav'
 import { sceneLabSidebar } from '../sceneLabLayout'
-import { cleanImage, DEMO_MODE, DEMO_FALLBACK_SCENE } from '../services/replicate'
+import { cleanImage, cleanImageViaCode, DEMO_MODE, DEMO_FALLBACK_SCENE } from '../services/replicate'
+import { getActiveCode, updateQuota } from '../accessCode'
 
 export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone }) {
   const { navigate } = useNav()
@@ -124,8 +125,12 @@ export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone })
     if (!image) return
     setError(null)
 
-    // ── DEMO MODE：绝不调用 Lamar API ──────────────────────────────
-    if (DEMO_MODE) {
+    // 有有效访问码 + 还有清理次数 → 走真实 Replicate 清理（即便 DEMO_MODE）
+    const ac = getActiveCode()
+    const useCode = !!(ac && ac.clean > 0)
+
+    // ── DEMO MODE（且无可用码）：绝不调用 Lamar API ──────────────────
+    if (DEMO_MODE && !useCode) {
       if (!isPreset) {
         // 用户自定义上传：真实清理需要 Live API，引导改用预设场景
         setDemoUploadNotice(true)
@@ -166,8 +171,16 @@ export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone })
       }
       ctx.putImageData(outData, 0, 0)
 
-      const result = await cleanImage(image, finalMask.toDataURL('image/png'))
-      const outputUrl = Array.isArray(result) ? result[0] : result
+      let outputUrl
+      if (useCode) {
+        // 经访问码走后端真实清理，扣 1 次并同步剩余次数
+        const r = await cleanImageViaCode(image, finalMask.toDataURL('image/png'), ac.code)
+        updateQuota('clean', r.left)
+        outputUrl = r.url
+      } else {
+        const result = await cleanImage(image, finalMask.toDataURL('image/png'))
+        outputUrl = Array.isArray(result) ? result[0] : result
+      }
       // 缓存破坏只对远程 http(s) 结果有意义；blob:/data: URL 加 ?t= 会失效，原样使用。
       const finalUrl = /^https?:/.test(outputUrl) ? outputUrl + '?t=' + Date.now() : outputUrl
       setCleanedImageUrl(finalUrl)

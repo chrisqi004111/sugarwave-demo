@@ -133,26 +133,30 @@ export default function CartPage() {
             <Row label="Subtotal" value={`€${subtotal}`} />
             <Row label="Shipping" value={shipping ? `€${delivery}` : '—'} />
 
-            {!shippingId ? (
-              <p style={{ fontSize: 13, color: C.gray, lineHeight: 1.7, marginTop: 20 }}>
-                Please select a shipping method to continue.
+            <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 16 }}>
+              <Row label="Estimated Total" value={`€${total}`} bold />
+            </div>
+            {!shippingId && (
+              <p style={{ fontSize: 12, color: C.gray, lineHeight: 1.7, marginTop: 12 }}>
+                Select a shipping method above to continue.
               </p>
-            ) : (
-              <>
-                <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 16 }}>
-                  <Row label="Estimated Total" value={`€${total}`} bold />
-                </div>
-                <button
-                  onClick={() => { track('checkout_start', { total, lines: items.length, method: shippingId }); navigate('checkout') }}
-                  style={{
-                    width: '100%', marginTop: 24, padding: '14px', background: C.black, color: C.bg,
-                    border: 'none', fontSize: 12, letterSpacing: 2, cursor: 'pointer',
-                  }}
-                >
-                  CHECKOUT →
-                </button>
-              </>
             )}
+            <button
+              onClick={() => {
+                if (!shippingId) return
+                track('checkout_start', { total, lines: items.length, method: shippingId })
+                navigate('checkout')
+              }}
+              disabled={!shippingId}
+              style={{
+                width: '100%', marginTop: shippingId ? 24 : 12, padding: '14px',
+                background: C.black, color: C.bg, border: 'none', fontSize: 12, letterSpacing: 2,
+                cursor: shippingId ? 'pointer' : 'not-allowed',
+                opacity: shippingId ? 1 : 0.4,
+              }}
+            >
+              CHECKOUT →
+            </button>
 
             <div
               onClick={() => navigate('shop')}

@@ -19,6 +19,77 @@ async function computeTargetSize(maskDataUrl) {
   return { w: round16(tw), h: round16(th) }
 }
 
+// 渲染 prompt（各通道共用）
+function buildRenderPrompt(refCount, productName, productDimensions) {
+  const angleNote = refCount > 1
+    ? `You are given ${refCount} reference photos of the SAME "${productName}" product shot from different angles — study all of them together to understand its true 3D shape, proportions and materials. `
+    : `You are given a reference photo of the "${productName}" product. `
+  return angleNote +
+    `Place this exact product into the masked (white) area of the room. ` +
+    `Its real-world physical dimensions are ${productDimensions} (read as width × depth × height). ` +
+    `SIZE IS CRITICAL: scale the product so it truly matches these real dimensions relative to the room. ` +
+    `Use visible references in the scene to judge scale — e.g. a sofa seat ≈ 45cm high, a dining/desk table ≈ 75cm high, ` +
+    `a door ≈ 200cm high, a floor lamp ≈ 150cm, typical floor tiles ≈ 30–60cm. Do NOT make the product oversized or undersized. ` +
+    `Preserve its exact shape, material, color and design — do not redesign or restyle it. ` +
+    `Match the room's perspective, lighting, shadows and reflections so it sits naturally and contacts the surface correctly. ` +
+    `Make it photorealistic. Keep everything outside the masked area completely unchanged.`
+}
+
+// ── 经访问码走后端真实渲染（生产环境，扣 1 次 render）────────────────────
+// 复用同样的缩放/prompt 逻辑，但把空间图/mask/产品转成 dataURL 以 JSON 发给
+// /api/render（后端校验码、调 OpenAI、扣次数）。返回 { image, left }。
+export async function placeProductInSpaceViaCode(
+  spaceImageFile, maskDataUrl, productImageFiles, productName, productDimensions, code,
+) {
+  const productFiles = Array.isArray(productImageFiles) ? productImageFiles : [productImageFiles]
+  const { w: TW, h: TH } = await computeTargetSize(maskDataUrl)
+  const spaceResized = await resizeImageFile(spaceImageFile, TW, TH)
+  const maskResized = await resizeMaskDataUrl(maskDataUrl, TW, TH)
+  const productResizedList = await Promise.all(
+    productFiles.slice(0, 3).map(f => resizeProductToSquare(f, SIZE)),
+  )
+
+  const prompt = buildRenderPrompt(productResizedList.length, productName, productDimensions)
+
+  // 空间图用 JPEG（更小），mask/产品用 PNG（mask 精度 / 产品透明背景）
+  const [space, products] = await Promise.all([
+    fileToJpegDataUrl(spaceResized, 0.9),
+    Promise.all(productResizedList.map(fileToDataUrl)),
+  ])
+
+  const res = await fetch('/api/render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, space, mask: maskResized, products, prompt, width: TW, height: TH }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const d = data.detail
+      ? ' — ' + (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)).slice(0, 300)
+      : ''
+    throw new Error((data.error || `render failed (${res.status})`) + d)
+  }
+  if (!data.image) throw new Error('render returned no image')
+  return { image: data.image, left: data.left }
+}
+
+// File → JPEG dataURL（把已缩放的空间图转成更小的 base64）
+function fileToJpegDataUrl(file, quality = 0.9) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = img.naturalWidth; c.height = img.naturalHeight
+      c.getContext('2d').drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      resolve(c.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export async function placeProductInSpace(
   spaceImageFile, maskDataUrl, productImageFiles, productName, productDimensions,
   engine = 'api',
@@ -34,20 +105,7 @@ export async function placeProductInSpace(
   // 产品参考图统一成 1024×1024，但保持原比例居中（不拉伸），避免非正方形照片被压变形误导 AI
   const productResizedList = await Promise.all(productFiles.map(f => resizeProductToSquare(f, SIZE)))
 
-  const angleNote = productResizedList.length > 1
-    ? `You are given ${productResizedList.length} reference photos of the SAME "${productName}" product shot from different angles — study all of them together to understand its true 3D shape, proportions and materials. `
-    : `You are given a reference photo of the "${productName}" product. `
-
-  const prompt =
-    angleNote +
-    `Place this exact product into the masked (white) area of the room. ` +
-    `Its real-world physical dimensions are ${productDimensions} (read as width × depth × height). ` +
-    `SIZE IS CRITICAL: scale the product so it truly matches these real dimensions relative to the room. ` +
-    `Use visible references in the scene to judge scale — e.g. a sofa seat ≈ 45cm high, a dining/desk table ≈ 75cm high, ` +
-    `a door ≈ 200cm high, a floor lamp ≈ 150cm, typical floor tiles ≈ 30–60cm. Do NOT make the product oversized or undersized. ` +
-    `Preserve its exact shape, material, color and design — do not redesign or restyle it. ` +
-    `Match the room's perspective, lighting, shadows and reflections so it sits naturally and contacts the surface correctly. ` +
-    `Make it photorealistic. Keep everything outside the masked area completely unchanged.`
+  const prompt = buildRenderPrompt(productResizedList.length, productName, productDimensions)
 
   if (engine === 'codex') {
     return placeViaCodex(spaceResized, maskResized, productResizedList, prompt, TW, TH)

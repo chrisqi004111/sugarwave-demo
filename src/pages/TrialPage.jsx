@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar'
 import { useNav } from '../nav'
 import { sceneLabSidebar, SCENE_LAB_SIDEBAR_WIDTH, SCENE_LAB_SIDEBAR_PAD } from '../sceneLabLayout'
 import { DEMO_MODE } from '../services/replicate'
+import { useAccessCode, updateQuota } from '../accessCode'
 import PRODUCT_META from '../assets/catalog/meta.json'
 
 // ── Scene Lab catalogue (auto-discovered) ──────────────────────────
@@ -149,6 +150,9 @@ function FurnitureItem({ item, isSelected, onSelect, onChange }) {
 
 export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLibrary, resume }) {
   const { navigate } = useNav()
+  // 有有效访问码 + 还有渲染次数 → 走真实 OpenAI 渲染（即便 DEMO_MODE）。
+  const activeCode = useAccessCode()
+  const liveRender = !DEMO_MODE || !!(activeCode && activeCode.render > 0)
   const [savedToLibrary, setSavedToLibrary] = useState(false)
 
   // SAVE TO LIBRARY：把当前场景图 + 工作进度（已放置叠层 / 手动摆放 / 进入模式）一起存到 App。
@@ -191,6 +195,8 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
   const [rendering, setRendering] = useState(false)            // AI 渲染中
   const [renderedImage, setRenderedImage] = useState(null)     // 渲染结果
   const [showRendered, setShowRendered] = useState(false)      // 显示渲染结果
+  const [renderedProducts, setRenderedProducts] = useState([]) // 访问码渲染：当前成片包含的产品（用于结算清单）
+  const [renderError, setRenderError] = useState(null)         // 渲染错误提示（横幅）
   const [placedItems, setPlacedItems] = useState(() => resume?.placedItems ?? [])  // DEMO_MODE：已放置的产品叠层 [{ id, product, x, y, width, rotation, opacity }]；从保存的会话还原（若有）
   const [selectedPlacedId, setSelectedPlacedId] = useState(null) // 当前选中的「TRY 放置」叠层
   const [aiEngine, setAiEngine] = useState('codex')            // 'codex' = 本地 Codex 订阅(默认) / 'api' = gpt-image-2 接口
@@ -298,6 +304,16 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
     // 不会丢掉已摆放/已添加的产品（reuse 与 SAVE TO LIBRARY 相同的 resume 结构）。
     const session = { items, placedItems, mode, defaultTab }
 
+    // ── 访问码真实渲染：用 OpenAI 成片作为 after，渲染过的产品并入结算清单 ──
+    if (renderedImage && renderedProducts.length) {
+      const renderItems = renderedProducts.map((p, i) => ({
+        id: `rendered-${p.id}-${i}`, productId: p.id, name: p.name,
+        price: p.price, src: p.img, category: p.category, dimensions: p.dimensions,
+      }))
+      onDone({ sceneDataUrl: renderedImage, items: [...items, ...renderItems], session })
+      return
+    }
+
     // ── DEMO_MODE：保留放置结果，绝不调用图像接口 ──
     if (DEMO_MODE) {
       console.log('DEMO_MODE done: preserving placement preview')
@@ -382,8 +398,8 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
     const stage = e.target.getStage()
     const pos = stage.getPointerPosition()
 
-    // ── DEMO_MODE：点击把当前产品「累加」到场景，绝不调用图像接口 ──
-    if (DEMO_MODE && placingProduct) {
+    // ── DEMO_MODE（且无可用渲染码）：点击把当前产品「累加」到场景，绝不调用接口 ──
+    if (DEMO_MODE && !liveRender && placingProduct) {
       if (!pos) return
       console.log('DEMO_MODE placement: using product overlay preview')
       // 保留之前放置的产品，把当前产品加到点击位置
@@ -414,46 +430,58 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
     const maskR = placingRadius * scale
     const mask = generateMask(maskCx, maskCy, maskR, bgImage.width, bgImage.height)
 
+    const product = placingProduct   // 渲染期间会清空 placingProduct，先留一份
+    const usingCode = !!(activeCode && activeCode.render > 0)
     setRendering(true)
+    setRenderError(null)
     setPlacingProduct(null)
     setPlaceCursor(null)
 
     try {
-      const { placeProductInSpace } = await import('../services/openai')
-
       // 获取空间图 File
       const spaceFile = await getSpaceImageFile()
 
       // 产品参考图 = 目录基准图 + 文件夹补充图(src/assets/products/<id>/)。
-      // 基准图可能缺失(某些产品暂无 png)，用 urlToFileSafe 容错跳过，
-      // 合并一并发给 codex（连同尺寸由 prompt 注入），最多取 6 张以控制渲染时长。
-      const baseFile = await urlToFileSafe(placingProduct.img, placingProduct.name + '.png')
-      const folderUrls = FOLDER_REFS[placingProduct.id] || []
+      const baseFile = await urlToFileSafe(product.img, product.name + '.png')
+      const folderUrls = FOLDER_REFS[product.id] || []
       const folderFiles = (await Promise.all(
-        folderUrls.map((u, i) => urlToFileSafe(u, `${placingProduct.id}-folder-${i}.png`))
+        folderUrls.map((u, i) => urlToFileSafe(u, `${product.id}-folder-${i}.png`))
       )).filter(Boolean)
       const productFiles = [baseFile, ...folderFiles].filter(Boolean).slice(0, 6)
       if (productFiles.length === 0) {
-        throw new Error(`「${placingProduct.name}」暂无任何参考图。请把图放进 src/assets/products/${placingProduct.id}/`)
+        throw new Error(`No reference image for "${product.name}".`)
       }
 
-      const resultUrl = await placeProductInSpace(
-        spaceFile,
-        mask,
-        productFiles,
-        placingProduct.name,
-        placingProduct.dimensions || 'standard size',
-        aiEngine
-      )
-
-      setRenderedImage(resultUrl)
-      setShowRendered(true)
+      if (usingCode) {
+        // 访问码：走后端 OpenAI 渲染，扣 1 次并同步剩余次数
+        const { placeProductInSpaceViaCode } = await import('../services/openai')
+        const r = await placeProductInSpaceViaCode(
+          spaceFile, mask, productFiles, product.name, product.dimensions || 'standard size', activeCode.code,
+        )
+        updateQuota('render', r.left)
+        setRenderedImage(r.image)
+        setRenderedProducts([product])   // 单产品成片：成片即包含该产品
+        setShowRendered(true)
+      } else {
+        // 本地 dev（非 DEMO，走 vite 代理）
+        const { placeProductInSpace } = await import('../services/openai')
+        const resultUrl = await placeProductInSpace(
+          spaceFile, mask, productFiles, product.name, product.dimensions || 'standard size', aiEngine,
+        )
+        setRenderedImage(resultUrl)
+        setRenderedProducts([product])
+        setShowRendered(true)
+      }
     } catch (err) {
       console.error('AI render error:', err)
-      // 实时接口失败：不中断流程，回退到预设成片
-      console.log('LIVE render failed: falling back to preset render')
-      setRenderedImage(presetRenderFor(placingProduct.id))
-      setShowRendered(true)
+      if (usingCode) {
+        // 访问码渲染失败：后端已退还次数，给出明确提示（不放预设成片误导）
+        setRenderError(err.message || 'Render failed')
+      } else {
+        setRenderedImage(presetRenderFor(product.id))
+        setRenderedProducts([product])
+        setShowRendered(true)
+      }
     }
 
     setRendering(false)
@@ -676,8 +704,8 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
             </div>
           )}
 
-          {/* ── 放置区域大小调节（仅 LIVE 模式：对应真实 mask 半径）── */}
-          {!DEMO_MODE && placingProduct && (
+          {/* ── 放置区域大小调节（LIVE / 访问码渲染：对应真实 mask 半径）── */}
+          {liveRender && placingProduct && (
             <div style={{
               position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
               zIndex: 10, background: 'rgba(0,0,0,0.7)', color: C.bg,
@@ -695,7 +723,7 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
           )}
 
           {/* ── DEMO_MODE：Placement Preview 提示 + Generate AI Render（产品叠层在舞台内渲染）── */}
-          {DEMO_MODE && placedItems.length > 0 && !placingProduct && !rendering && !showRendered && (
+          {DEMO_MODE && !liveRender && placedItems.length > 0 && !placingProduct && !rendering && !showRendered && (
             <>
               <div style={{
                 position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
@@ -729,15 +757,23 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
             }}>
               <div style={{ fontSize: 36 }}>✦</div>
               <p style={{ color: C.bg, fontSize: 14, letterSpacing: 2 }}>
-                {DEMO_MODE ? 'Generating AI-rendered preview...' : 'AI IS RENDERING...'}
+                {liveRender ? 'AI IS RENDERING...' : 'Generating AI-rendered preview...'}
               </p>
               <p style={{ color: C.gray, fontSize: 11 }}>
-                {DEMO_MODE
-                  ? 'Preset portfolio render · ~2s'
-                  : aiEngine === 'codex'
-                    ? 'Local Codex · up to ~4 min'
-                    : 'Matching perspective & lighting · 60–90s'}
+                {liveRender ? 'Placing your product · up to ~60s' : 'Preset portfolio render · ~2s'}
               </p>
+            </div>
+          )}
+
+          {/* ── 渲染失败提示（访问码渲染；次数已退还）── */}
+          {renderError && !rendering && (
+            <div style={{
+              position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 21,
+              maxWidth: '80%', background: '#fee', border: '1px solid #fcc', color: '#c00',
+              padding: '8px 16px', fontSize: 11, lineHeight: 1.5, display: 'flex', gap: 12, alignItems: 'center',
+            }}>
+              <span>Render failed (your render credit was refunded): {renderError}</span>
+              <span onClick={() => setRenderError(null)} style={{ cursor: 'pointer', color: C.gray }}>✕</span>
             </div>
           )}
 
@@ -813,7 +849,7 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
               ))}
 
               {/* 放置模式预览圆（仅 LIVE：对应真实 mask 区域）*/}
-              {!DEMO_MODE && placingProduct && placeCursor && (
+              {liveRender && placingProduct && placeCursor && (
                 <Circle
                   x={placeCursor.x}
                   y={placeCursor.y}
@@ -830,7 +866,7 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
 
           {/* DEMO 产品叠层预览：在舞台层内，用 Stage 坐标定位，随舞台居中而对齐。
               多个产品累加显示，CLEAR 一次清空。*/}
-          {DEMO_MODE && !rendering && !showRendered && placedItems.map(it => (
+          {DEMO_MODE && !liveRender && !rendering && !showRendered && placedItems.map(it => (
             <img
               key={it.id}
               src={it.product.img}

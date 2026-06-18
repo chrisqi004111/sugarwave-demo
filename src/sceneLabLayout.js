@@ -16,7 +16,9 @@ export const SCENE_LAB_SIDEBAR_PAD = 14
 // 右侧控制面板通用外框：固定宽度、不被压缩、左侧分隔线、白底。
 export const sceneLabSidebar = {
   width: SCENE_LAB_SIDEBAR_WIDTH,
+  maxWidth: '100%',
   flexShrink: 0,
+  boxSizing: 'border-box',   // 任何分区追加的 padding 都算进 320 之内，不会把侧栏撑宽
   borderLeft: '1px solid #e0e0e0',
   background: '#ffffff',
 }

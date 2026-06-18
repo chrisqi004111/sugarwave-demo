@@ -640,12 +640,13 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, paddingTop: 64 }}>
+    <div style={{ height: '100vh', boxSizing: 'border-box', background: C.bg, paddingTop: 64, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
       <Navbar activePage="SCENE LAB" />
 
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 0 8px 20px', borderBottom: `1px solid ${C.lightGray}`, height: 44,
+        padding: '8px 0 8px 20px', borderBottom: `1px solid ${C.lightGray}`,
+        minHeight: 44, flexShrink: 0, boxSizing: 'border-box',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span
@@ -678,21 +679,21 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
         {/* 右侧操作组 = 与右侧栏同宽、贴紧页面右缘的列；左右内距 = 侧栏统一内距，
             space-between 让 UNDO 左缘对齐侧栏内容左缘、SAVE 右缘对齐侧栏内容右缘。
             所有按钮 nowrap + flexShrink:0，图标文字一行、各按钮等高 */}
-        <div style={{ width: SCENE_LAB_SIDEBAR_WIDTH, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingLeft: SCENE_LAB_SIDEBAR_PAD, paddingRight: SCENE_LAB_SIDEBAR_PAD }}>
-          <button onClick={handleUndo} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: `1px solid ${C.border}`, background: C.bg, padding: '5px 14px', fontSize: 10, letterSpacing: 1, cursor: 'pointer' }}>
+        <div style={{ width: SCENE_LAB_SIDEBAR_WIDTH, maxWidth: '100%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', gap: 6, rowGap: 6, paddingLeft: SCENE_LAB_SIDEBAR_PAD, paddingRight: SCENE_LAB_SIDEBAR_PAD }}>
+          <button onClick={handleUndo} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: `1px solid ${C.border}`, background: C.bg, padding: '5px 10px', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer' }}>
             ↩ UNDO
           </button>
           {(selectedId || selectedPlacedId) && (
-            <button onClick={deleteSelected} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid #e00', background: C.bg, color: '#e00', padding: '5px 14px', fontSize: 10, letterSpacing: 1, cursor: 'pointer' }}>
+            <button onClick={deleteSelected} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid #e00', background: C.bg, color: '#e00', padding: '5px 10px', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer' }}>
               DELETE
             </button>
           )}
-          <button style={{ flexShrink: 0, whiteSpace: 'nowrap', border: `1px solid ${C.border}`, background: C.bg, padding: '5px 14px', fontSize: 10, letterSpacing: 1, cursor: 'pointer' }}>SHARE</button>
-          <button onClick={handleSaveToLibrary} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: 'none', background: savedToLibrary ? '#2d7a2d' : C.black, color: C.bg, padding: '5px 14px', fontSize: 10, letterSpacing: 1, cursor: 'pointer' }}>{savedToLibrary ? 'SAVED ✓' : 'SAVE TO LIBRARY'}</button>
+          <button style={{ flexShrink: 0, whiteSpace: 'nowrap', border: `1px solid ${C.border}`, background: C.bg, padding: '5px 10px', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer' }}>SHARE</button>
+          <button onClick={handleSaveToLibrary} style={{ flexShrink: 0, whiteSpace: 'nowrap', border: 'none', background: savedToLibrary ? '#2d7a2d' : C.black, color: C.bg, padding: '5px 10px', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer' }}>{savedToLibrary ? 'SAVED ✓' : 'SAVE TO LIBRARY'}</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 108px)' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div ref={containerRef} style={{
           flex: 1, overflow: 'hidden', position: 'relative', background: '#f2f2f2',
           display: 'flex', alignItems: 'center', justifyContent: 'center',

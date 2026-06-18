@@ -7,6 +7,7 @@ import MobileDesktopNotice from '../components/MobileDesktopNotice'
 import { sceneLabSidebar, SCENE_LAB_SIDEBAR_WIDTH, SCENE_LAB_SIDEBAR_PAD } from '../sceneLabLayout'
 import { DEMO_MODE } from '../services/replicate'
 import { useAccessCode, updateQuota } from '../accessCode'
+import AccessCodeEntry from '../components/AccessCodeEntry'
 import PRODUCT_META from '../assets/catalog/meta.json'
 
 // ── Scene Lab catalogue (auto-discovered) ──────────────────────────
@@ -200,6 +201,7 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
   const [showRendered, setShowRendered] = useState(false)      // 显示渲染结果
   const [renderedProducts, setRenderedProducts] = useState([]) // 访问码渲染：当前成片包含的产品（用于结算清单）
   const [renderError, setRenderError] = useState(null)         // 渲染错误提示（横幅）
+  const [renderNotice, setRenderNotice] = useState(false)      // 无码时点 Generate AI Render 的「需要 access code」提示卡
   const [placedItems, setPlacedItems] = useState(() => resume?.placedItems ?? [])  // DEMO_MODE：已放置的产品叠层 [{ id, product, x, y, width, rotation, opacity }]；从保存的会话还原（若有）
   const [selectedPlacedId, setSelectedPlacedId] = useState(null) // 当前选中的「TRY 放置」叠层
   const [aiEngine, setAiEngine] = useState('codex')            // 'codex' = 本地 Codex 订阅(默认) / 'api' = gpt-image-2 接口
@@ -284,18 +286,12 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
     setPlaceCursor(null)
   }
 
-  // ── DEMO_MODE：从「Placement Preview」生成预设 AI 渲染结果（不调用接口）──
-  async function handleGenerateRender() {
+  // ── 无可用渲染码：不再生成预设假图，弹提示告诉用户这是 demo、真实渲染需要 access code ──
+  function handleGenerateRender() {
     if (!placedItems.length) return
     setPlacingProduct(null)
     setPlaceCursor(null)
-    setRendering(true)
-    await new Promise(r => setTimeout(r, 2000))   // 短暂 loading：Generating AI-rendered preview...
-    // 预设成片用最近放置的产品做匹配
-    const lastProduct = placedItems[placedItems.length - 1].product
-    setRenderedImage(presetRenderFor(lastProduct.id))
-    setShowRendered(true)
-    setRendering(false)
+    setRenderNotice(true)
   }
 
   // ── 点击 DONE：进入下一页（结算/Your Design）──────────────────────
@@ -798,6 +794,34 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
             }}>
               <span>Render failed (your render credit was refunded): {renderError}</span>
               <span onClick={() => setRenderError(null)} style={{ cursor: 'pointer', color: C.gray }}>✕</span>
+            </div>
+          )}
+
+          {/* ── 无渲染码提示卡：不生成假图，告知这是 demo + 可输入 access code 解锁 ── */}
+          {renderNotice && !rendering && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 22, background: 'rgba(255,255,255,0.94)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            }}>
+              <div style={{
+                maxWidth: 460, textAlign: 'center', border: `1px solid ${C.lightGray}`,
+                borderRadius: 6, padding: '32px 36px', background: C.bg, boxShadow: '0 8px 28px rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 14 }}>✦</div>
+                <p style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.5, marginBottom: 12 }}>
+                  Demo · live render locked
+                </p>
+                <p style={{ fontSize: 13, color: C.gray, lineHeight: 1.7, marginBottom: 20 }}>
+                  This is a portfolio demo, so no AI image is generated here. To run a real AI
+                  render of your scene, enter an access (promo) code below.
+                </p>
+                <div style={{ marginBottom: 16 }}><AccessCodeEntry /></div>
+                <button onClick={() => setRenderNotice(false)} style={{
+                  width: '100%', padding: '10px', background: 'none',
+                  border: `1px solid ${C.border}`, fontSize: 11, letterSpacing: 1.5,
+                  color: C.black, cursor: 'pointer',
+                }}>BACK</button>
+              </div>
             </div>
           )}
 

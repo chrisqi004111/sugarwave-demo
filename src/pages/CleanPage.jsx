@@ -6,6 +6,7 @@ import MobileDesktopNotice from '../components/MobileDesktopNotice'
 import { sceneLabSidebar } from '../sceneLabLayout'
 import { cleanImage, cleanImageViaCode, DEMO_MODE, DEMO_FALLBACK_SCENE } from '../services/replicate'
 import { getActiveCode, updateQuota } from '../accessCode'
+import AccessCodeEntry from '../components/AccessCodeEntry'
 
 export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone }) {
   const { navigate } = useNav()
@@ -333,20 +334,22 @@ export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone })
                 padding: '32px 36px', background: C.bg,
                 boxShadow: '0 8px 28px rgba(0,0,0,0.08)',
               }}>
-                <div style={{ fontSize: 28, marginBottom: 14 }}>✨</div>
+                <div style={{ fontSize: 28, marginBottom: 14 }}>✦</div>
                 <p style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.5, marginBottom: 12 }}>
-                  Demo Mode
+                  Demo · live cleanup locked
                 </p>
-                <p style={{ fontSize: 13, color: C.gray, lineHeight: 1.7, marginBottom: 24 }}>
-                  Custom image cleanup requires Live API mode. For this portfolio demo,
-                  continue with a preset scene to experience the full flow.
+                <p style={{ fontSize: 13, color: C.gray, lineHeight: 1.7, marginBottom: 20 }}>
+                  This is a portfolio demo. Real AI cleanup needs an access code — your uploaded
+                  photo is never altered or replaced without one. Enter an access (promo) code to
+                  run a real cleanup, or continue with your own photo as-is.
                 </p>
-                <button onClick={() => onDone(DEMO_FALLBACK_SCENE)} style={{
+                <div style={{ marginBottom: 16 }}><AccessCodeEntry /></div>
+                <button onClick={() => onDone(imageUrl)} style={{
                   width: '100%', padding: '12px', background: C.black, color: C.bg,
                   border: 'none', fontSize: 11, letterSpacing: 2, cursor: 'pointer',
                   marginBottom: 10,
                 }}>
-                  CONTINUE WITH DEMO SCENE →
+                  CONTINUE WITH MY PHOTO →
                 </button>
                 <button onClick={() => setDemoUploadNotice(false)} style={{
                   width: '100%', padding: '10px', background: 'none',

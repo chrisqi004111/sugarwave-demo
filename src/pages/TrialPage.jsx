@@ -657,22 +657,27 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
             style={{ fontSize: 10, color: C.gray, letterSpacing: 1, cursor: 'pointer' }}
           >← EXIT</span>
           <span style={{ fontSize: 11, letterSpacing: 2, fontWeight: 500 }}>SCENE LAB</span>
-          <button onClick={() => setShowGrid(g => !g)} style={{
-            fontSize: 10, letterSpacing: 1, padding: '3px 10px',
-            border: `1px solid ${showGrid ? C.black : C.border}`,
-            background: showGrid ? C.black : C.bg,
-            color: showGrid ? C.bg : C.black, cursor: 'pointer',
-          }}>
-            {showGrid ? 'GRID ON' : 'GRID OFF'}
-          </button>
-          <button onClick={() => setAiEngine(e => e === 'api' ? 'codex' : 'api')} title="切换 AI 出图引擎" style={{
-            fontSize: 10, letterSpacing: 1, padding: '3px 10px',
-            border: `1px solid ${aiEngine === 'codex' ? '#2d7a2d' : C.border}`,
-            background: aiEngine === 'codex' ? '#2d7a2d' : C.bg,
-            color: aiEngine === 'codex' ? C.bg : C.black, cursor: 'pointer',
-          }}>
-            {aiEngine === 'codex' ? 'ENGINE: CODEX' : 'ENGINE: API'}
-          </button>
+          {/* Dev-only debug toggles (grid overlay + AI engine) — hidden in production build */}
+          {import.meta.env.DEV && (
+            <>
+              <button onClick={() => setShowGrid(g => !g)} style={{
+                fontSize: 10, letterSpacing: 1, padding: '3px 10px',
+                border: `1px solid ${showGrid ? C.black : C.border}`,
+                background: showGrid ? C.black : C.bg,
+                color: showGrid ? C.bg : C.black, cursor: 'pointer',
+              }}>
+                {showGrid ? 'GRID ON' : 'GRID OFF'}
+              </button>
+              <button onClick={() => setAiEngine(e => e === 'api' ? 'codex' : 'api')} title="切换 AI 出图引擎" style={{
+                fontSize: 10, letterSpacing: 1, padding: '3px 10px',
+                border: `1px solid ${aiEngine === 'codex' ? '#2d7a2d' : C.border}`,
+                background: aiEngine === 'codex' ? '#2d7a2d' : C.bg,
+                color: aiEngine === 'codex' ? C.bg : C.black, cursor: 'pointer',
+              }}>
+                {aiEngine === 'codex' ? 'ENGINE: CODEX' : 'ENGINE: API'}
+              </button>
+            </>
+          )}
         </div>
         {/* 右侧操作组 = 与右侧栏同宽、贴紧页面右缘的列；左右内距 = 侧栏统一内距，
             space-between 让 UNDO 左缘对齐侧栏内容左缘、SAVE 右缘对齐侧栏内容右缘。

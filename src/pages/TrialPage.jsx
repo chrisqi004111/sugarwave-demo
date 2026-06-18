@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Stage, Layer, Image as KonvaImage, Transformer, Circle } from 'react-konva'
 import Navbar from '../components/Navbar'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
+import MobileDesktopNotice from '../components/MobileDesktopNotice'
 import { sceneLabSidebar, SCENE_LAB_SIDEBAR_WIDTH, SCENE_LAB_SIDEBAR_PAD } from '../sceneLabLayout'
 import { DEMO_MODE } from '../services/replicate'
 import { useAccessCode, updateQuota } from '../accessCode'
@@ -150,6 +152,7 @@ function FurnitureItem({ item, isSelected, onSelect, onChange }) {
 
 export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLibrary, resume }) {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   // 有有效访问码 + 还有渲染次数 → 走真实 OpenAI 渲染（即便 DEMO_MODE）。
   const activeCode = useAccessCode()
   const liveRender = !DEMO_MODE || !!(activeCode && activeCode.render > 0)
@@ -623,6 +626,19 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
   const placedValue = placedItems.reduce((s, it) => s + (it.product.price || 0), 0)
   const totalValue = items.reduce((s, i) => s + i.price, 0) + placedValue
   const totalCount = items.length + placedItems.length
+
+  // Mobile: the Konva placement canvas isn't usable on a phone — skip to a
+  // preset demo result so the flow continues to Your Design without breaking.
+  if (isMobile) {
+    const p = PRODUCTS[0]
+    return (
+      <MobileDesktopNotice onContinue={() => onDone({
+        sceneDataUrl: p ? presetRenderFor(p.id) : null,
+        items: p ? [{ id: `demo-${p.id}`, productId: p.id, name: p.name, price: p.price, src: p.img, category: p.category, dimensions: p.dimensions }] : [],
+        session: { items: [], placedItems: [], mode, defaultTab },
+      })} />
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, paddingTop: 64 }}>

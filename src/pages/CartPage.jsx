@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Page, Container, track } from '../components/Layout'
 import { C, kicker } from '../theme'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
 import { useCart, setQty, removeFromCart, setShipping, SHIPPING_METHODS } from '../cart'
 
 const DESTINATIONS = ['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Netherlands', 'China', 'Japan', 'Australia']
 
 export default function CartPage() {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   const { items, subtotal, shipping, shippingId, delivery, total } = useCart()
   const [destination, setDestination] = useState(DESTINATIONS[0])
 
@@ -30,7 +32,7 @@ export default function CartPage() {
         <p style={kicker}>Cart</p>
         <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 40 }}>Your Cart</h1>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 64, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'start' }}>
 
           {/* ── Left: products + shipping ── */}
           <div>

@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 import BeforeAfterSlider from '../components/BeforeAfterSlider'
 import AccessCodeEntry from '../components/AccessCodeEntry'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
 import { loadSavedDesign } from '../savedDesign'
 import { DEMO_MODE } from '../services/replicate'
 
@@ -15,6 +16,7 @@ const LANDING_AFTER = '/scene-lab/after.png'
 
 export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   // 最近一次保存的「最终设计」（来自 Your Design 页的 SAVE，存在 localStorage）。
   const [savedDesign] = useState(() => loadSavedDesign())
   // 首页范例图是否存在：加载失败则回退为拖放上传区。
@@ -123,14 +125,30 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
     <div style={{ background: C.bg, minHeight: '100vh', paddingTop: 64 }}>
       <Navbar activePage="SCENE LAB" />
 
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 64px)' }}>
+      <div style={{
+        display: 'flex', minHeight: 'calc(100vh - 64px)',
+        flexDirection: isMobile ? 'column' : 'row',
+      }}>
 
         {/* ── Left Panel ── */}
         <div style={{
-          width: 340, flexShrink: 0, padding: '60px 40px',
-          borderRight: `1px solid ${C.lightGray}`,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          width: isMobile ? '100%' : 340, flexShrink: 0,
+          padding: isMobile ? '28px 20px' : '60px 40px',
+          borderRight: isMobile ? 'none' : `1px solid ${C.lightGray}`,
+          borderBottom: isMobile ? `1px solid ${C.lightGray}` : 'none',
+          display: 'flex', flexDirection: 'column',
+          justifyContent: isMobile ? 'flex-start' : 'center',
         }}>
+          {/* Mobile notice — guide to desktop for the full experience */}
+          {isMobile && (
+            <div style={{
+              border: `1px solid ${C.lightGray}`, background: C.bgGray,
+              padding: '10px 12px', marginBottom: 20,
+              fontSize: 11, color: C.gray, lineHeight: 1.6,
+            }}>
+              For the full AI placement experience, please open this demo on desktop.
+            </div>
+          )}
           <p style={{ fontSize: 11, letterSpacing: 3, color: C.gray, marginBottom: 16 }}>
             SCENE LAB
           </p>
@@ -259,7 +277,8 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
           onMouseUp={onCropMouseUp}
           onMouseLeave={onCropMouseUp}
           style={{
-            flex: 1, position: 'relative', overflow: 'hidden',
+            ...(isMobile ? { width: '100%', height: 300, flexShrink: 0 } : { flex: 1 }),
+            position: 'relative', overflow: 'hidden',
             background: C.bgGray,
             border: dragging ? `2px dashed ${C.black}` : '2px dashed transparent',
             cursor: isLandscape ? (isDraggingCrop ? 'grabbing' : 'grab') : 'default',
@@ -316,7 +335,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
             </>
           ) : savedDesign ? (
             /* 最近保存的「最终设计」：静态展示（非滑块），点击查看/继续。来自 Your Design 页 SAVE。 */
-            <div style={{ width: '100%', height: '100%', minHeight: 480, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '100%', minHeight: isMobile ? 280 : 480, position: 'relative', overflow: 'hidden' }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 backgroundImage: `url(${savedDesign.afterImage || savedDesign.beforeImage})`,
@@ -372,7 +391,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
             <div
               onClick={() => onContinueSaved?.()}
               style={{
-                width: '100%', height: '100%', minHeight: 480, position: 'relative',
+                width: '100%', height: '100%', minHeight: isMobile ? 280 : 480, position: 'relative',
                 cursor: 'pointer', overflow: 'hidden',
               }}
             >
@@ -411,7 +430,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
           ) : landingArtOk ? (
             /* 默认：Before/After 范例滑块（无保存设计时展示，替代灰色空背景）。
                拖放上传仍可用（drop 处理在外层容器上）。*/
-            <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 480, overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: isMobile ? 280 : 480, overflow: 'hidden' }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 backgroundImage: `url(${LANDING_AFTER})`,
@@ -429,7 +448,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
             </div>
           ) : (
             <div style={{
-              width: '100%', height: '100%', minHeight: 480,
+              width: '100%', height: '100%', minHeight: isMobile ? 280 : 480,
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center', gap: 12,
             }}>
@@ -446,7 +465,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
       </div>
 
       {/* ── Preset Scenes ── */}
-      <div style={{ padding: '72px 40px', borderTop: `1px solid ${C.lightGray}` }}>
+      <div style={{ padding: isMobile ? '40px 20px' : '72px 40px', borderTop: `1px solid ${C.lightGray}` }}>
         <p style={{ fontSize: 11, letterSpacing: 3, color: C.gray, marginBottom: 8 }}>
           NO PHOTO?
         </p>
@@ -457,13 +476,18 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
           Try one of our spaces.
         </p>
 
-        <div style={{ display: 'flex', gap: 16 }}>
+        {/* Mobile: horizontal scroll list; desktop: equal-width row */}
+        <div style={{
+          display: 'flex', gap: 16,
+          ...(isMobile ? { overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' } : {}),
+        }}>
           {presetScenes.map(scene => (
             <div
               key={scene.name}
               onClick={() => handlePresetClick(scene.img)}
               style={{
-                flex: 1, cursor: 'pointer',
+                ...(isMobile ? { flex: '0 0 78%' } : { flex: 1 }),
+                cursor: 'pointer',
                 border: `1px solid ${C.lightGray}`,
                 background: C.bg, overflow: 'hidden',
                 transition: 'border-color 0.2s',

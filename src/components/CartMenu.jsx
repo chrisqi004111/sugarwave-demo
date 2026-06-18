@@ -33,7 +33,7 @@ export default function CartMenu() {
       {/* Hover mini-cart */}
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', right: 0, width: 330,
+          position: 'absolute', top: '100%', right: 0, width: 330, maxWidth: 'calc(100vw - 24px)',
           background: C.bg, border: `1px solid ${C.border}`,
           boxShadow: '0 6px 18px rgba(0,0,0,0.06)', padding: 16, zIndex: 200,
           fontFamily: FONTS.nav,

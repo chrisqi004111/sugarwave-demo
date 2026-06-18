@@ -1,7 +1,9 @@
 import Navbar from '../components/Navbar'
+import { useIsMobile } from '../useIsMobile'
 
 export default function SelectPage({ onSelect }) {
   const C = { bg: '#fff', black: '#000', gray: '#888', lightGray: '#e0e0e0', border: '#d0d0d0' }
+  const isMobile = useIsMobile()
 
   // 两种进入模式：mode + defaultTab 一起传给下一页（TrialPage），决定右侧栏默认标签页。
   // img = 卡片插图，放在 public/select/（缺图时自动回退为灰色占位）
@@ -25,15 +27,16 @@ export default function SelectPage({ onSelect }) {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
       <Navbar activePage="SCENE LAB" />
-      <div style={{ flex: 1, display: 'flex', paddingTop: 64 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', paddingTop: 64 }}>
         {MODES.map((item, i) => (
           <div key={item.mode}
             onClick={() => onSelect({ mode: item.mode, defaultTab: item.defaultTab })}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              borderRight: i === 0 ? `1px solid ${C.lightGray}` : 'none',
-              padding: 60, cursor: 'pointer', transition: 'background 0.2s', gap: 20,
+              borderRight: !isMobile && i === 0 ? `1px solid ${C.lightGray}` : 'none',
+              borderBottom: isMobile && i === 0 ? `1px solid ${C.lightGray}` : 'none',
+              padding: isMobile ? '40px 24px' : 60, cursor: 'pointer', transition: 'background 0.2s', gap: 20,
             }}
             onMouseEnter={e => e.currentTarget.style.background = '#f9f9f9'}
             onMouseLeave={e => e.currentTarget.style.background = C.bg}

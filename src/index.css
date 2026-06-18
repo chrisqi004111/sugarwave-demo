@@ -9,6 +9,9 @@
   box-sizing: border-box;
 }
 
+/* Mobile safety net: never allow horizontal scroll from a stray fixed-width element. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
 body {
   font-family: nobel, sans-serif;
   font-weight: 200;

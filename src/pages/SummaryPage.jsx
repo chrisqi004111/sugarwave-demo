@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 import BeforeAfterSlider from '../components/BeforeAfterSlider'
 import { sceneLabSidebar } from '../sceneLabLayout'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
 import { addToCart } from '../cart'
 import { saveDesign } from '../savedDesign'
 import { track } from '../analytics'
@@ -11,6 +12,7 @@ const C = { bg: '#fff', black: '#000', gray: '#888', lightGray: '#e0e0e0', borde
 
 export default function SummaryPage({ beforeImage, afterImage, placement, items = [], onBack }) {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   const [saved, setSaved] = useState(false)
 
   // AFTER 视图兜底链：① 有成片(afterImage：预设/实时截图) → 直接显示；
@@ -103,12 +105,16 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
         </div>
       </div>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 112px)' }}>
+      <div style={{
+        display: 'flex',
+        ...(isMobile ? { flexDirection: 'column', height: 'auto' } : { height: 'calc(100vh - 112px)' }),
+      }}>
 
         {/* ── 左侧图片区：图片以「可用高度」为基准最大化（上下不留边），
             剩余左右留白用全幅毛玻璃填充；overflow:hidden 兜底，不溢出到右侧 cart / 导航。*/}
         <div style={{
-          flex: 1, background: '#f2f2f2', position: 'relative',
+          ...(isMobile ? { width: '100%', height: 320, flexShrink: 0 } : { flex: 1 }),
+          background: '#f2f2f2', position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
         }}>
@@ -124,8 +130,9 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
           {/* Before / After 拖拽对比滑块：左 Before(清理后场景)、右 After(成片或场景+叠层)。
               两层共用同一舞台尺寸，容器尺寸稳定、不跳变。 */}
           {beforeImage ? (
-            <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-              <BeforeAfterSlider beforeSrc={beforeImage} after={afterNode} />
+            <div style={{ position: 'relative', zIndex: 1, height: '100%', ...(isMobile ? { width: '100%' } : {}) }}>
+              {/* Mobile: fill mode (fit width, no overflow); desktop: tight self-size */}
+              <BeforeAfterSlider fill={isMobile} beforeSrc={beforeImage} after={afterNode} />
             </div>
           ) : (
             <p style={{ position: 'relative', zIndex: 1, color: C.gray, fontSize: 13, letterSpacing: 1 }}>FINAL SCENE</p>
@@ -133,7 +140,7 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
         </div>
 
         {/* ── 右侧产品清单 ── */}
-        <div style={{ ...sceneLabSidebar, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...sceneLabSidebar, ...(isMobile ? { width: '100%' } : {}), display: 'flex', flexDirection: 'column' }}>
 
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.lightGray}` }}>
             <div style={{ fontStyle: 'italic', fontSize: 16, letterSpacing: 2, marginBottom: 8 }}>sugarwave</div>

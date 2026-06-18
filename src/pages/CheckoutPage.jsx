@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Page, Container, track } from '../components/Layout'
 import { C, kicker } from '../theme'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
 import { useCart, clearCart, saveLastOrder } from '../cart'
 
 const field = {
@@ -11,6 +12,7 @@ const field = {
 
 export default function CheckoutPage() {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   const { items, subtotal, shipping, delivery, total } = useCart()
   const [form, setForm] = useState({
     name: '', email: '', phone: '',
@@ -52,7 +54,7 @@ export default function CheckoutPage() {
         <p style={kicker}>Checkout</p>
         <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 40 }}>Checkout</h1>
 
-        <form onSubmit={placeOrder} style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 64, alignItems: 'start' }}>
+        <form onSubmit={placeOrder} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'start' }}>
 
           {/* ── Left: contact + shipping address + payment ── */}
           <div>

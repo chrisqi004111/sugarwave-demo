@@ -1,12 +1,15 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import Navbar from '../components/Navbar'
 import { useNav } from '../nav'
+import { useIsMobile } from '../useIsMobile'
+import MobileDesktopNotice from '../components/MobileDesktopNotice'
 import { sceneLabSidebar } from '../sceneLabLayout'
 import { cleanImage, cleanImageViaCode, DEMO_MODE, DEMO_FALLBACK_SCENE } from '../services/replicate'
 import { getActiveCode, updateQuota } from '../accessCode'
 
 export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone }) {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
   const containerRef = useRef(null)
   const imgRef = useRef(null)
   const overlayRef = useRef(null)
@@ -208,6 +211,12 @@ export default function CleanPage({ image, isPreset, presetCleanedUrl, onDone })
   function switchMode(newMode) {
     if (newMode === mode) return
     setMode(newMode)
+  }
+
+  // Mobile: the paint/canvas clean-up isn't usable on a phone — skip to the
+  // cleaned demo scene so the flow continues without a broken canvas.
+  if (isMobile) {
+    return <MobileDesktopNotice onContinue={() => onDone(presetCleanedUrl || DEMO_FALLBACK_SCENE)} />
   }
 
   return (

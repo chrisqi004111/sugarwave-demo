@@ -1,6 +1,7 @@
 import { C, FONTS, NAV_HEIGHT } from '../theme'
 import { useNav } from '../nav'
 import { track } from '../analytics'
+import { useIsMobile } from '../useIsMobile'
 import CartMenu from './CartMenu'
 
 // 顶栏左右内距 = Scene Lab 首页左面板的内距(40)，让 logo 左缘与下方「SCENE LAB」对齐
@@ -13,22 +14,24 @@ const ACTIVE_ITEM = 'Scene Lab'
 
 export default function Navbar() {
   const { navigate } = useNav()
+  const isMobile = useIsMobile()
 
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
       background: C.bg, borderBottom: `1px solid ${C.lightGray}`,
       display: 'flex', alignItems: 'center',
-      justifyContent: 'space-between', padding: `0 ${NAV_PAD}px`, height: NAV_HEIGHT,
+      justifyContent: 'space-between', padding: `0 ${isMobile ? 16 : NAV_PAD}px`, height: NAV_HEIGHT,
     }}>
       <img
         src="/logo.png"
         alt="sugarwave"
         onClick={() => { track('nav_click', { item: 'Logo', route: 'scene-lab' }); navigate('scene-lab') }}
-        style={{ height: 52, objectFit: 'contain', cursor: 'pointer', display: 'block' }}
+        style={{ height: isMobile ? 40 : 52, objectFit: 'contain', cursor: 'pointer', display: 'block' }}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-        {ITEMS.map((label) => {
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 18 : 40 }}>
+        {/* Mobile: hide the text nav items to avoid crowding (logo taps back to Scene Lab) */}
+        {!isMobile && ITEMS.map((label) => {
           const isActive = label === ACTIVE_ITEM
           // 「Scene Lab」在任意页面都可点击回到 Scene Lab 首页；其余导航项仅展示。
           const isSceneLab = label === 'Scene Lab'

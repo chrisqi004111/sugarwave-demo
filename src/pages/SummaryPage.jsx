@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import BeforeAfterSlider from '../components/BeforeAfterSlider'
 import { sceneLabSidebar } from '../sceneLabLayout'
@@ -15,10 +15,31 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
   const isMobile = useIsMobile()
   const [saved, setSaved] = useState(false)
 
-  // AFTER 视图兜底链：① 有成片(afterImage：预设/实时截图) → 直接显示；
-  // ② 否则若有 DEMO 放置叠层 → 用「清理后场景 + 产品 PNG 叠层」合成；③ 都没有 → 只显示清理后场景。
-  const overlayItems = (!afterImage && placement?.items?.length) ? placement.items : null
+  // AFTER 兜底链（绝不显示无关图）：
+  //   render  → afterImage（AI 成片 / 截图）
+  //   overlay → 清理后场景 + 放置叠层（产品 PNG）
+  //   scene   → 仅清理后场景
+  const afterSource = afterImage ? 'render' : (placement?.items?.length ? 'overlay' : 'scene')
+  const overlayItems = afterSource === 'overlay' ? placement.items : null
   const bgImage = afterImage || beforeImage  // 毛玻璃背景跟随 AFTER 图
+
+  useEffect(() => {
+    if (afterSource === 'render') console.log('Your Design: using AI render result')
+    else if (afterSource === 'overlay') console.log('Your Design: using placement overlay fallback')
+    else console.log('Your Design: no render or overlay found, using cleaned scene')
+  }, [afterSource])
+
+  // 移动端：把预览舞台比例设成「当前 AFTER 图」的真实比例 —— contain 不留黑边、
+  // 产品叠层按比例对齐、不溢出、不变形。
+  const [sceneAspect, setSceneAspect] = useState(null)
+  useEffect(() => {
+    if (!bgImage) { setSceneAspect(null); return }
+    const img = new Image()
+    img.onload = () => setSceneAspect(
+      img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : null,
+    )
+    img.src = bgImage
+  }, [bgImage])
 
   const imgFill = { width: '100%', height: '100%', objectFit: 'contain', display: 'block' }
   // AFTER 图层内容：成片 / 场景图 + 产品叠层 / 仅场景图（都不破页）。
@@ -90,20 +111,28 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
     <div style={{ minHeight: '100vh', background: C.bg, paddingTop: 64 }}>
       <Navbar activePage="SCENE LAB" />
 
+      {/* Action bar — desktop: Back | title | Share/Save on one row.
+          Mobile: Back … Share/Save (no overlap), title on its own row below. */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 24px', borderBottom: `1px solid ${C.lightGray}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        padding: isMobile ? '10px 16px' : '10px 24px',
+        borderBottom: isMobile ? 'none' : `1px solid ${C.lightGray}`,
       }}>
         <button onClick={onBack} style={{
-          background: 'none', border: `1px solid ${C.border}`,
-          padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer',
+          background: 'none', border: `1px solid ${C.border}`, flexShrink: 0,
+          padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer', whiteSpace: 'nowrap',
         }}>← BACK TO SCENE</button>
-        <h2 style={{ fontSize: 13, letterSpacing: 3, fontWeight: 500 }}>YOUR DESIGN</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
+        {!isMobile && <h2 style={{ fontSize: 13, letterSpacing: 3, fontWeight: 500 }}>YOUR DESIGN</h2>}
+        <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
           <button style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>SHARE</button>
           <button onClick={handleSave} style={{ border: `1px solid ${C.black}`, background: saved ? '#2d7a2d' : C.black, color: C.bg, padding: '6px 16px', fontSize: 11, letterSpacing: 1, cursor: 'pointer', borderColor: saved ? '#2d7a2d' : C.black }}>{saved ? 'SAVED ✓' : 'SAVE'}</button>
         </div>
       </div>
+      {isMobile && (
+        <div style={{ padding: '6px 16px 12px', borderBottom: `1px solid ${C.lightGray}` }}>
+          <h2 style={{ fontSize: 13, letterSpacing: 3, fontWeight: 500 }}>YOUR DESIGN</h2>
+        </div>
+      )}
 
       <div style={{
         display: 'flex',
@@ -113,7 +142,9 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
         {/* ── 左侧图片区：图片以「可用高度」为基准最大化（上下不留边），
             剩余左右留白用全幅毛玻璃填充；overflow:hidden 兜底，不溢出到右侧 cart / 导航。*/}
         <div style={{
-          ...(isMobile ? { width: '100%', height: 320, flexShrink: 0 } : { flex: 1 }),
+          ...(isMobile
+            ? { width: '100%', aspectRatio: sceneAspect ? String(sceneAspect) : '4 / 3', flexShrink: 0 }
+            : { flex: 1 }),
           background: '#f2f2f2', position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
@@ -207,7 +238,10 @@ export default function SummaryPage({ beforeImage, afterImage, placement, items 
             </div>
           </div>
 
-          <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{
+            padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 8,
+            paddingBottom: isMobile ? 'calc(40px + env(safe-area-inset-bottom, 0px))' : 16,
+          }}>
             <button
               onClick={handleAddToCart}
               disabled={productList.length === 0}

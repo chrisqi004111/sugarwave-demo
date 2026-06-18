@@ -627,13 +627,16 @@ export default function TrialPage({ image, onDone, mode, defaultTab, onSaveToLib
   const totalValue = items.reduce((s, i) => s + i.price, 0) + placedValue
   const totalCount = items.length + placedItems.length
 
-  // Mobile: the Konva placement canvas isn't usable on a phone — skip to a
-  // preset demo result so the flow continues to Your Design without breaking.
+  // Mobile: the Konva placement canvas isn't usable on a phone — skip to Your
+  // Design with a PLACEMENT OVERLAY demo (cleaned scene + one product PNG), NOT
+  // an unrelated preset render. No AI render image is invented here.
   if (isMobile) {
     const p = PRODUCTS[0]
     return (
       <MobileDesktopNotice onContinue={() => onDone({
-        sceneDataUrl: p ? presetRenderFor(p.id) : null,
+        sceneDataUrl: null,
+        demoAfter: null,
+        placement: p ? { items: [{ src: p.img, name: p.name, xRatio: 0.5, yRatio: 0.62, wRatio: 0.3, rotation: 0, opacity: 1 }] } : null,
         items: p ? [{ id: `demo-${p.id}`, productId: p.id, name: p.name, price: p.price, src: p.img, category: p.category, dimensions: p.dimensions }] : [],
         session: { items: [], placedItems: [], mode, defaultTab },
       })} />

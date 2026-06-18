@@ -51,6 +51,9 @@ export default function BeforeAfterSlider({ beforeSrc, after, labels = true, fil
     background: 'rgba(0,0,0,0.42)', padding: '4px 10px', pointerEvents: 'none',
   })
   const imgFill = { width: '100%', height: '100%', objectFit: 'contain', display: 'block' }
+  // Inline styles aren't auto-prefixed — iOS Safari needs -webkit-clip-path or
+  // the BEFORE layer never clips (you'd only ever see "before"). Set both.
+  const clip = `inset(0 ${100 - pos}% 0 0)`
 
   return (
     <div
@@ -73,7 +76,7 @@ export default function BeforeAfterSlider({ beforeSrc, after, labels = true, fil
       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>{after}</div>
 
       {/* BEFORE (clipped — shown on the left up to the handle) */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, clipPath: clip, WebkitClipPath: clip }}>
         <img src={beforeSrc} alt="before" draggable={false} style={imgFill} />
       </div>
 

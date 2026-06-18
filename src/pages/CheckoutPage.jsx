@@ -21,6 +21,12 @@ export default function CheckoutPage() {
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
+  // Mobile: trim the shared Container's 100px side padding to 24px, add bottom
+  // safe-area padding, and make inputs taller / more spaced for touch.
+  const cPad = isMobile ? { paddingLeft: 24, paddingRight: 24 } : {}
+  const cPadBottom = isMobile ? { paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' } : {}
+  const fieldStyle = isMobile ? { ...field, padding: '18px 16px', fontSize: 16, marginBottom: 18 } : field
+
   function placeOrder(e) {
     e.preventDefault()
     // Simulate order submission locally — no backend / payment APIs.
@@ -38,9 +44,9 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <Page>
-        <Container style={{ paddingTop: 56 }}>
+        <Container style={{ paddingTop: 56, ...cPad }}>
           <p style={kicker}>Checkout</p>
-          <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 24 }}>Checkout</h1>
+          <h1 style={{ fontSize: isMobile ? 32 : 40, fontWeight: 400, marginBottom: 24 }}>Checkout</h1>
           <p style={{ color: C.gray, fontSize: 14, marginBottom: 20 }}>Your cart is empty.</p>
           <span style={{ ...ghostBtn, cursor: 'default', display: 'inline-block' }}>BROWSE SHOP →</span>
         </Container>
@@ -50,28 +56,29 @@ export default function CheckoutPage() {
 
   return (
     <Page>
-      <Container style={{ paddingTop: 56 }}>
+      <Container style={{ paddingTop: 56, ...cPad, ...cPadBottom }}>
         <p style={kicker}>Checkout</p>
-        <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 40 }}>Checkout</h1>
+        <h1 style={{ fontSize: isMobile ? 32 : 40, fontWeight: 400, marginBottom: isMobile ? 24 : 40 }}>Checkout</h1>
 
         <form onSubmit={placeOrder} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'start' }}>
 
           {/* ── Left: contact + shipping address + payment ── */}
           <div>
             <p style={{ ...kicker, marginBottom: 16 }}>Contact information</p>
-            <input style={field} placeholder="Name" value={form.name} onChange={set('name')} required />
-            <input style={field} placeholder="Email" type="email" value={form.email} onChange={set('email')} required />
-            <input style={field} placeholder="Phone" value={form.phone} onChange={set('phone')} required />
+            <input style={fieldStyle} placeholder="Name" value={form.name} onChange={set('name')} required />
+            <input style={fieldStyle} placeholder="Email" type="email" value={form.email} onChange={set('email')} required />
+            <input style={fieldStyle} placeholder="Phone" value={form.phone} onChange={set('phone')} required />
 
             <p style={{ ...kicker, margin: '28px 0 16px' }}>Shipping address</p>
-            <input style={field} placeholder="Country / Region" value={form.country} onChange={set('country')} required />
-            <div style={{ display: 'flex', gap: 14 }}>
-              <input style={field} placeholder="City" value={form.city} onChange={set('city')} required />
-              <input style={field} placeholder="Postal code" value={form.postal} onChange={set('postal')} required />
+            <input style={fieldStyle} placeholder="Country / Region" value={form.country} onChange={set('country')} required />
+            {/* Mobile: stack City over Postal (block); desktop: side by side (flex) */}
+            <div style={{ display: isMobile ? 'block' : 'flex', gap: 14 }}>
+              <input style={fieldStyle} placeholder="City" value={form.city} onChange={set('city')} required />
+              <input style={fieldStyle} placeholder="Postal code" value={form.postal} onChange={set('postal')} required />
             </div>
-            <input style={field} placeholder="Address" value={form.address} onChange={set('address')} required />
+            <input style={fieldStyle} placeholder="Address" value={form.address} onChange={set('address')} required />
             <textarea
-              style={{ ...field, minHeight: 80, resize: 'vertical', fontFamily: 'inherit' }}
+              style={{ ...fieldStyle, minHeight: isMobile ? 110 : 80, resize: 'vertical', fontFamily: 'inherit' }}
               placeholder="Delivery notes (optional)"
               value={form.notes} onChange={set('notes')}
             />

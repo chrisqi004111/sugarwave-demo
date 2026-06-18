@@ -13,12 +13,18 @@ export default function CartPage() {
   const { items, subtotal, shipping, shippingId, delivery, total } = useCart()
   const [destination, setDestination] = useState(DESTINATIONS[0])
 
+  // Mobile: shrink the shared Container's 100px side padding to 20px so the
+  // single-column cart fills the phone width and rows stop overflowing. Add
+  // bottom safe-area padding so the checkout CTA clears the browser toolbar.
+  const cPad = isMobile ? { paddingLeft: 20, paddingRight: 20 } : {}
+  const cPadBottom = isMobile ? { paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' } : {}
+
   if (items.length === 0) {
     return (
       <Page>
-        <Container style={{ paddingTop: 56 }}>
+        <Container style={{ paddingTop: 56, ...cPad }}>
           <p style={kicker}>Cart</p>
-          <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 24 }}>Your Cart</h1>
+          <h1 style={{ fontSize: isMobile ? 30 : 40, fontWeight: 400, marginBottom: 24 }}>Your Cart</h1>
           <p style={{ marginBottom: 20, color: C.gray, fontSize: 14 }}>Your cart is empty.</p>
           <span style={{ ...ghostBtn, cursor: 'default', display: 'inline-block' }}>BROWSE SHOP →</span>
         </Container>
@@ -28,9 +34,9 @@ export default function CartPage() {
 
   return (
     <Page>
-      <Container style={{ paddingTop: 56 }}>
+      <Container style={{ paddingTop: 56, ...cPad, ...cPadBottom }}>
         <p style={kicker}>Cart</p>
-        <h1 style={{ fontSize: 40, fontWeight: 400, marginBottom: 40 }}>Your Cart</h1>
+        <h1 style={{ fontSize: isMobile ? 30 : 40, fontWeight: 400, marginBottom: isMobile ? 28 : 40 }}>Your Cart</h1>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'start' }}>
 
@@ -39,11 +45,11 @@ export default function CartPage() {
             <div style={{ borderTop: `1px solid ${C.lightGray}` }}>
               {items.map(it => (
                 <div key={it.slug} style={{
-                  display: 'flex', gap: 20, padding: '24px 0',
-                  borderBottom: `1px solid ${C.lightGray}`,
+                  display: 'flex', gap: isMobile ? 14 : 20, padding: '24px 0',
+                  borderBottom: `1px solid ${C.lightGray}`, maxWidth: '100%',
                 }}>
                   <div style={{
-                    width: 96, height: 96, flexShrink: 0, background: C.bgGray,
+                    width: isMobile ? 110 : 96, height: isMobile ? 110 : 96, flexShrink: 0, background: C.bgGray,
                     border: `1px solid ${C.lightGray}`, overflow: 'hidden',
                   }}>
                     {it.image && (
@@ -59,6 +65,8 @@ export default function CartPage() {
                     {it.size && <Spec label="Size" value={it.size} />}
                     {it.weight && <Spec label="Weight" value={it.weight} />}
                     <div style={{ fontSize: 13, color: C.gray, marginTop: 6 }}>Unit price €{it.price}</div>
+                    {/* Mobile: line total lives in the info column (no separate right column) */}
+                    {isMobile && <div style={{ fontSize: 16, marginTop: 6 }}>€{it.price * it.qty}</div>}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -73,7 +81,7 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 16, width: 80, textAlign: 'right' }}>€{it.price * it.qty}</div>
+                  {!isMobile && <div style={{ fontSize: 16, width: 80, textAlign: 'right' }}>€{it.price * it.qty}</div>}
                 </div>
               ))}
             </div>
@@ -91,7 +99,7 @@ export default function CartPage() {
                 value={destination}
                 onChange={e => setDestination(e.target.value)}
                 style={{
-                  width: '100%', maxWidth: 360, padding: '12px 14px', fontSize: 14,
+                  width: '100%', maxWidth: isMobile ? '100%' : 360, padding: '12px 14px', fontSize: 14,
                   border: `1px solid ${C.border}`, background: C.bg, boxSizing: 'border-box',
                 }}
               >
@@ -110,7 +118,7 @@ export default function CartPage() {
                       key={m.id}
                       onClick={() => { setShipping(m.id); track('checkout_start', { step: 'shipping_method', method: m.id }) }}
                       style={{
-                        flex: '1 1 200px', padding: '16px 18px', cursor: 'pointer',
+                        flex: isMobile ? '1 1 100%' : '1 1 200px', padding: '16px 18px', cursor: 'pointer',
                         border: `1px solid ${active ? C.black : C.border}`,
                         background: C.bg,
                         outline: active ? `1px solid ${C.black}` : 'none',

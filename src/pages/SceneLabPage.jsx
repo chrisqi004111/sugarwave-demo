@@ -277,7 +277,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
           onMouseUp={onCropMouseUp}
           onMouseLeave={onCropMouseUp}
           style={{
-            ...(isMobile ? { width: '100%', height: 300, flexShrink: 0 } : { flex: 1 }),
+            ...(isMobile ? { width: '100%', flexShrink: 0 } : { flex: 1 }),
             position: 'relative', overflow: 'hidden',
             background: C.bgGray,
             border: dragging ? `2px dashed ${C.black}` : '2px dashed transparent',
@@ -334,21 +334,30 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
               )}
             </>
           ) : savedDesign ? (
-            /* 最近保存的「最终设计」：静态展示（非滑块），点击查看/继续。来自 Your Design 页 SAVE。 */
-            <div style={{ width: '100%', height: '100%', minHeight: isMobile ? 280 : 480, position: 'relative', overflow: 'hidden' }}>
+            /* 最近保存的「最终设计」：静态展示（非滑块），点击查看/继续。来自 Your Design 页 SAVE。
+               移动端：放大成全宽 hero（容器 60vh、图片 width:100%、四周用同图毛玻璃填充）。*/
+            <div style={{ width: '100%', height: '100%', minHeight: isMobile ? '60vh' : 480, position: 'relative', overflow: 'hidden' }}>
               <div style={{
                 position: 'absolute', inset: 0,
                 backgroundImage: `url(${savedDesign.afterImage || savedDesign.beforeImage})`,
                 backgroundSize: 'cover', backgroundPosition: 'center',
                 filter: 'blur(24px) brightness(0.9)', transform: 'scale(1.1)',
               }} />
-              {/* 最终设计：成片，或 场景图 + 产品叠层 */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', height: '100%' }}>
+              {/* 最终设计：成片，或 场景图 + 产品叠层。移动端按宽度铺满、桌面按高度铺满。 */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                ...(isMobile ? { width: '100%' } : { height: '100%' }),
+              }}>
                 <img
                   src={savedDesign.afterImage || savedDesign.beforeImage}
                   alt="saved design"
                   onError={e => { e.currentTarget.style.display = 'none' }}
-                  style={{ height: '100%', width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' }}
+                  style={{
+                    ...(isMobile
+                      ? { width: '100%', height: 'auto' }
+                      : { height: '100%', width: 'auto', maxWidth: '100%', objectFit: 'contain' }),
+                    display: 'block', userSelect: 'none',
+                  }}
                 />
                 {!savedDesign.afterImage && savedDesign.placement?.items?.map((o, i) => (
                   <img

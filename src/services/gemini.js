@@ -1,6 +1,10 @@
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY
 
 export async function analyzeSpaceAndRecommend(imageFile) {
+  // No key (demo / China static build) → don't even contact Google (blocked in
+  // mainland China); throw so the caller falls back to the popular-items pool.
+  if (!GEMINI_KEY) throw new Error('AI recommendation disabled (no key / demo build)')
+
   const base64 = await fileToBase64(imageFile)
   const mimeType = imageFile.type || 'image/jpeg'
 

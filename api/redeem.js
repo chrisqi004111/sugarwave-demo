@@ -1,11 +1,10 @@
-// POST or GET { code } → validate a code and return its remaining quotas.
-// Does NOT consume anything — used by the frontend to unlock the live tools
-// and show "X cleans / Y renders left".
-import { getCode } from '../lib/kv.js'
+// Thin Vercel adapter: reads { code } from the request (POST body or GET query,
+// exactly as before) and delegates to the shared redeem core. The same core is
+// reused by the future Tencent Cloud Express backend.
+import { redeem } from '../lib/redeem.core.js'
 
 export default async function handler(req, res) {
   const code = req.method === 'POST' ? req.body?.code : req.query?.code
-  const info = await getCode(code)
-  if (!info) return res.status(404).json({ ok: false, error: 'invalid code' })
-  return res.status(200).json({ ok: true, clean: info.clean, render: info.render })
+  const { status, body } = await redeem({ code })
+  return res.status(status).json(body)
 }

@@ -18,4 +18,13 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  // Server-side code (Vercel Functions + shared cores + Tencent Express) runs in
+  // Node, not the browser — give it Node globals (process, Buffer, …) so they
+  // aren't flagged as undefined.
+  {
+    files: ['api/**/*.js', 'lib/**/*.js', 'server/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

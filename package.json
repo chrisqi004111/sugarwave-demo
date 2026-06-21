@@ -7,12 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:server": "node server/index.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@upstash/redis": "^1.38.0",
     "axios": "^1.16.1",
+    "express": "^4.22.2",
     "https-proxy-agent": "^9.0.0",
     "konva": "^10.3.0",
     "react": "^19.2.6",

@@ -2,7 +2,7 @@
 // "render" use, then call OpenAI's image edit (gpt-image-2) to place the product
 // into the masked area. All images are data URLs built/resized client-side.
 // quality='low' keeps a single render comfortably under the 60s function limit.
-import { consume, refund } from './_kv.js'
+import { consume, refund } from '../lib/kv.js'
 
 export const config = { maxDuration: 60 }
 

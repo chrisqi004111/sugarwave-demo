@@ -3,7 +3,7 @@
 // (data:...;base64,...) built client-side. Replicate is async: we create the
 // prediction (Prefer: wait=30) and either return the result, or a prediction
 // id the client polls via /api/clean-status.
-import { consume, refund } from './_kv.js'
+import { consume, refund } from '../lib/kv.js'
 
 // lama-cleaner model version (same one used by the original dev proxy).
 const MODEL_VERSION = 'cdac78a1bec5b23c07fd29692fb70baa513ea403a39e643c48ec5edadb15fe72'

@@ -6,7 +6,7 @@
 //     /api/admin-codes?key=SECRET&action=status&code=ABCD2345
 //
 // ADMIN_SECRET is a Vercel env var you set (a long random string only you know).
-import { redis, getCode } from './_kv.js'
+import { redis, getCode } from '../lib/kv.js'
 
 // Crockford-ish alphabet: no 0/O/1/I to avoid confusion when read aloud.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

@@ -1,4 +1,5 @@
 // src/services/replicate.js
+import { apiUrl } from '../utils/apiUrl'
 //
 // Authorization 由 vite.config.js 的代理层统一注入，这里不传。
 // 使用 FLUX.1 Fill [dev] 官方模型，无需 version hash，直接用模型路径调用。
@@ -139,7 +140,7 @@ async function pollPrediction(id) {
 export async function cleanImageViaCode(imageFile, maskDataUrl, code) {
   const { url: image, w, h } = await fileToScaledJpegDataUrl(imageFile, 1024)
   const mask = await maskToScaledPngDataUrl(maskDataUrl, w, h)
-  const res = await fetch('/api/clean', {
+  const res = await fetch(apiUrl('/api/clean'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, image, mask }),
@@ -164,7 +165,7 @@ async function pollCleanStatus(id, maxAttempts = 40, interval = 2000) {
   if (!id) throw new Error('no prediction id')
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, interval))
-    const res = await fetch(`/api/clean-status?id=${encodeURIComponent(id)}`)
+    const res = await fetch(apiUrl(`/api/clean-status?id=${encodeURIComponent(id)}`))
     const data = await res.json().catch(() => ({}))
     if (data.status === 'succeeded') return data.output
     if (data.status === 'failed' || data.status === 'canceled') throw new Error('clean ' + data.status)

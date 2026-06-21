@@ -4,6 +4,7 @@
 // and to gate the UI. Each successful backend call returns the new `left`, which
 // we mirror via updateQuota().
 import { useEffect, useReducer } from 'react'
+import { apiUrl } from './utils/apiUrl'
 
 const KEY = 'sw_access_code_v1'
 
@@ -30,7 +31,7 @@ export async function applyCode(code) {
   if (!c) return { ok: false, error: 'empty' }
   let data = {}
   try {
-    const res = await fetch('/api/redeem', {
+    const res = await fetch(apiUrl('/api/redeem'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: c }),

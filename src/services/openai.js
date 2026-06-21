@@ -1,4 +1,5 @@
 // src/services/openai.js
+import { apiUrl } from '../utils/apiUrl'
 // 两条通道：
 //   engine='api'   → OpenAI gpt-image-2 图像编辑接口（按 API 计费，Authorization 由 vite 代理注入）
 //   engine='codex' → 本地 Codex CLI（走 ChatGPT 订阅额度，由 vite.config.js 的 /api/codex/place 中间件桥接）
@@ -57,7 +58,7 @@ export async function placeProductInSpaceViaCode(
     Promise.all(productResizedList.map(fileToDataUrl)),
   ])
 
-  const res = await fetch('/api/render', {
+  const res = await fetch(apiUrl('/api/render'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, space, mask: maskResized, products, prompt, width: TW, height: TH }),

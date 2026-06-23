@@ -21,6 +21,9 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
   const [savedDesign] = useState(() => loadSavedDesign())
   // 首页范例图是否存在：加载失败则回退为拖放上传区。
   const [landingArtOk, setLandingArtOk] = useState(true)
+  // 保存的设计/场景图若失效（如自定义上传的 blob URL 跨会话失效），回退到 before/after 范例而非空白。
+  const [savedDesignOk, setSavedDesignOk] = useState(true)
+  const [savedSceneOk, setSavedSceneOk] = useState(true)
   useEffect(() => {
     const img = new Image()
     img.onload = () => setLandingArtOk(true)
@@ -333,7 +336,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 </div>
               )}
             </>
-          ) : savedDesign ? (
+          ) : savedDesign && savedDesignOk ? (
             /* 最近保存的「最终设计」：静态展示（非滑块），点击查看/继续。来自 Your Design 页 SAVE。
                移动端：放大成全宽 hero（容器 60vh、图片 width:100%、四周用同图毛玻璃填充）。*/
             <div style={{ width: '100%', height: '100%', minHeight: isMobile ? '60vh' : 480, position: 'relative', overflow: 'hidden' }}>
@@ -351,7 +354,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 <img
                   src={savedDesign.afterImage || savedDesign.beforeImage}
                   alt="saved design"
-                  onError={e => { e.currentTarget.style.display = 'none' }}
+                  onError={() => setSavedDesignOk(false)}
                   style={{
                     ...(isMobile
                       ? { width: '100%', height: 'auto' }
@@ -395,7 +398,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 VIEW SAVED DESIGN →
               </div>
             </div>
-          ) : savedScene ? (
+          ) : savedScene && savedSceneOk ? (
             /* SAVE TO LIBRARY 保存过场景：右侧默认展示「上次使用的照片」。点击可继续编辑该场景。*/
             <div
               onClick={() => onContinueSaved?.()}
@@ -413,7 +416,7 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
               <img
                 src={savedScene}
                 alt="saved scene"
-                onError={e => { e.currentTarget.style.display = 'none' }}
+                onError={() => setSavedSceneOk(false)}
                 style={{
                   position: 'absolute', top: '50%', left: '50%',
                   transform: 'translate(-50%, -50%)',

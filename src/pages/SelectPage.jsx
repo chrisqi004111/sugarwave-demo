@@ -45,6 +45,8 @@ export default function SelectPage({ onSelect }) {
               <img
                 src={item.img}
                 alt={item.label}
+                loading="lazy"
+                decoding="async"
                 onError={e => { e.currentTarget.style.display = 'none' }}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />

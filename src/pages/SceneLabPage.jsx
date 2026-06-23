@@ -517,6 +517,8 @@ export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) 
                 <img
                   src={scene.img}
                   alt={scene.name}
+                  loading="lazy"
+                  decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   onError={e => { e.target.style.display = 'none' }}
                 />

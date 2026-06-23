@@ -262,6 +262,8 @@ function SceneAISection({ navigate }) {
                   {p.image ? (
                     <img
                       src={p.image} alt={p.name}
+                      loading="lazy"
+                      decoding="async"
                       style={{ maxWidth: '82%', maxHeight: '82%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                     />
                   ) : (

@@ -11,8 +11,8 @@ const CANVAS_RATIO = 16 / 9
 
 // 首页默认范例：右侧 Before/After 滑块用的成对图（同一房间，前=空/后=摆好产品）。
 // 放在 public/scene-lab/ 下；缺图时自动回退为上传拖放区，不破页。
-const LANDING_BEFORE = '/scene-lab/before.png'
-const LANDING_AFTER = '/scene-lab/after.png'
+const LANDING_BEFORE = '/scene-lab/before.jpg'
+const LANDING_AFTER = '/scene-lab/after.jpg'
 
 export default function SceneLabPage({ onUpload, savedScene, onContinueSaved }) {
   const { navigate } = useNav()

@@ -61,6 +61,8 @@ export default function ShopPage() {
                 <img
                   src={p.img}
                   alt={p.name}
+                  loading="lazy"
+                  decoding="async"
                   onError={e => { e.currentTarget.style.display = 'none' }}
                   style={{ width: scale, height: scale, objectFit: 'contain', display: 'block' }}
                 />
